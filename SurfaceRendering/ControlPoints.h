@@ -4,9 +4,9 @@
 #include "opencv2/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
-#include <Eigen/Dense>
+#include <iostream>
+#include <vector>
 
-using Eigen::MatrixXd;
 using namespace cv;
 using namespace std;
 

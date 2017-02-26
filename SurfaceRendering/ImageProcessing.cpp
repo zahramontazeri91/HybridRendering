@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <vector>
+#include <iostream>
 
 using namespace cv;
 
@@ -16,14 +17,12 @@ RNG rng(12345);
 
 int thresh = 200;
 int max_thresh = 255;
-char* source_window = "Source image";
-char* corners_window = "Corners detected";
 
-Mat ZeroPadding(Mat src)
+Mat ZeroPadding(Mat src, int margin)
 {
 	dst = src;
 	value = Scalar(0, 0, 0);
-	copyMakeBorder(src, dst, 30, 30, 30, 30, BORDER_CONSTANT, value);
+	copyMakeBorder(src, dst, margin, margin, margin, margin, BORDER_CONSTANT, value);
 
 	// Create window
 	//namedWindow(window_name, CV_WINDOW_AUTOSIZE);
@@ -45,6 +44,7 @@ void CornerDetector(Mat src_gray, std::vector<Point>& points)
 
 	Mat dst, dst_norm, dst_norm_scaled;
 	dst = Mat::zeros(src_gray.size(), CV_32FC1);
+
 
 	/// Detector parameters
 	int blockSize = 2;
@@ -71,6 +71,7 @@ void CornerDetector(Mat src_gray, std::vector<Point>& points)
 		}
 	}
 	/// Showing the result
-	namedWindow(corners_window, CV_WINDOW_AUTOSIZE);
-	imshow(corners_window, dst_norm_scaled);
+	//imshow("Aligned Image", dst_norm_scaled);
+
+	return;
 }

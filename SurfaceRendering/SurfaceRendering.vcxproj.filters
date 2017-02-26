@@ -27,6 +27,9 @@
     <ClCompile Include="Segmentation.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Morphing.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ControlPoints.h">
@@ -36,6 +39,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Segmentation.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Morphing.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

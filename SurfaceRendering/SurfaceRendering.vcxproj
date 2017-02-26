@@ -161,11 +161,13 @@
     <ClCompile Include="ImageProcessing.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="ControlPoints.cpp" />
+    <ClCompile Include="Morphing.cpp" />
     <ClCompile Include="Segmentation.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ControlPoints.h" />
     <ClInclude Include="ImageProcessing.h" />
+    <ClInclude Include="Morphing.h" />
     <ClInclude Include="Segmentation.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
