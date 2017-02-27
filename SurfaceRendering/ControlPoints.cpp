@@ -15,8 +15,6 @@ void ControlPoints(Mat movingImage, Mat fixedImage, vector<Point>& movingPoints,
 {
 	int wnd_size = 30;
 	int wnd_size_crn = 20;
-	movingImage = ZeroPadding(movingImage, wnd_size);
-	fixedImage = ZeroPadding(fixedImage, wnd_size);
 
 	Mat edge_moving = EdgeDetector(movingImage);
 	Mat edge_fixed = EdgeDetector(fixedImage);
