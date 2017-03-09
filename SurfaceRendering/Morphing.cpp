@@ -95,7 +95,7 @@ void morphing(Mat& img_new, Mat img, vector<Point> movingPoints, vector<Point> f
 	imshow("Ly", t);
 
 	int padding = 100;
-	Mat img_pad = ZeroPadding(img, 100);
+	Mat img_pad = ZeroPadding(img, padding);
 	MatrixXd img_pad_mat;
 	cv2eigen(img_pad, img_pad_mat);
 
@@ -104,7 +104,8 @@ void morphing(Mat& img_new, Mat img, vector<Point> movingPoints, vector<Point> f
 			img_new_mat(i, j) = img_pad_mat(i + Lx(i, j) + padding, j + Ly(i, j) + padding);
 		}
 	}
-
+	//TO DO change the size back
+	cout <<  "morphing one patch ... " << endl;
 	eigen2cv(img_new_mat, img_new);
 
 	return;

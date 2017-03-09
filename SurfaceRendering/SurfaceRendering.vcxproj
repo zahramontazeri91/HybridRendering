@@ -163,9 +163,11 @@
     <ClCompile Include="ControlPoints.cpp" />
     <ClCompile Include="Morphing.cpp" />
     <ClCompile Include="Segmentation.cpp" />
+    <ClCompile Include="Regularization.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ControlPoints.h" />
+    <ClInclude Include="Regularization.h" />
     <ClInclude Include="ImageProcessing.h" />
     <ClInclude Include="Morphing.h" />
     <ClInclude Include="Segmentation.h" />

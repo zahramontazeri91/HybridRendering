@@ -30,6 +30,9 @@
     <ClCompile Include="Morphing.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Regularization.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ControlPoints.h">
@@ -42,6 +45,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Morphing.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Regularization.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
