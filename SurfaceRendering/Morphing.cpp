@@ -88,11 +88,11 @@ void morphing(Mat& img_new, Mat img, vector<Point> movingPoints, vector<Point> f
 	fastLaplace(dx, dy, temp, Lx, Ly);
 
 	///display the Lx and Ly
-	Mat t;
-	eigen2cv(Lx, t);
-	imshow("Lx", t);
-	eigen2cv(Ly, t);
-	imshow("Ly", t);
+	//Mat t;
+	//eigen2cv(Lx, t);
+	//imshow("Lx", t);
+	//eigen2cv(Ly, t);
+	//imshow("Ly", t);
 
 	int padding = 100;
 	Mat img_pad = ZeroPadding(img, padding);
@@ -105,7 +105,7 @@ void morphing(Mat& img_new, Mat img, vector<Point> movingPoints, vector<Point> f
 		}
 	}
 	//TO DO change the size back
-	cout <<  "morphing one patch ... " << endl;
+	cout <<  "morphing() is returned ... " << endl;
 	eigen2cv(img_new_mat, img_new);
 
 	return;

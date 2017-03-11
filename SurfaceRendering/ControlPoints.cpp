@@ -273,7 +273,7 @@ void ControlPoints(Mat movingImage, Mat fixedImage, vector<Point>& movingPoints,
 
 	//cout << fixedPoints.size() << endl << movingPoints.size() << endl;
 
-	imshow("edge_moving", edge_moving);
-	imshow("edge_fixed", edge_fixed);
+	//imshow("edge_moving", edge_moving);
+	//imshow("edge_fixed", edge_fixed);
 	return;
 }

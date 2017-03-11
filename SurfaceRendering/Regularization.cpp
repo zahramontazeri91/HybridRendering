@@ -23,6 +23,7 @@ using namespace Eigen;
 using namespace std;
 using namespace cv;
 
+int overlap = 30;
 int counter = 0;
 //Point2DVector GeneratePoints();
 
@@ -124,12 +125,40 @@ Mat warpRegression(Mat im, int startCol, int endCol) {
 	std::cout << "status: " << status << std::endl;
 
 	MatrixXd im_reg_mat = MatrixXd::Zero(im_mat.rows(), im_mat.cols());
-	for (int i = startCol; i <= endCol; i++) {
-		for (int j = 0; j < im_mat.rows(); j++) {
-			double x = j;
-			double y = theta(0)*sin(theta(1)*x + theta(2)) + theta(3);
-			cout << y << endl;
-			im_reg_mat(j, i) = y;
+	if (startCol == 0) {
+		for (int i = startCol; i <= endCol + overlap; i++) {
+			for (int j = 0; j < im_mat.rows(); j++) {
+				double x = j;
+				double y = theta(0)*sin(theta(1)*x + theta(2)) + theta(3);
+				im_reg_mat(j, i) = y;
+			}
+		}
+	}
+	else if (endCol == 440) {
+		for (int i = startCol - overlap; i <= 456; i++) {
+			for (int j = 0; j < im_mat.rows(); j++) {
+				double x = j;
+				double y = theta(0)*sin(theta(1)*x + theta(2)) + theta(3);
+				im_reg_mat(j, i) = y;
+			}
+		}
+	}
+	else if (endCol == 456) {
+		for (int i = startCol - overlap ; i <= endCol ; i++) {
+			for (int j = 0; j < im_mat.rows(); j++) {
+				double x = j;
+				double y = theta(0)*sin(theta(1)*x + theta(2)) + theta(3);
+				im_reg_mat(j, i) = y;
+			}
+		}
+	}
+	else {
+		for (int i = startCol - overlap ; i <= endCol + overlap; i++) {
+			for (int j = 0; j < im_mat.rows(); j++) {
+				double x = j;
+				double y = theta(0)*sin(theta(1)*x + theta(2)) + theta(3);
+				im_reg_mat(j, i) = y;
+			}
 		}
 	}
 
@@ -153,6 +182,7 @@ Mat weftRegression(Mat im, int startRow, int endRow) {
 	Point2DVector points;
 	int indx, row = 0;
 	//TO DO: make sure you changed the size of image back
+
 	for (int i = startRow; i <= endRow; i++) {
 		for (int j = 0; j < im_mat.cols(); j++) {
 			indx = j + row*im_mat.cols();
@@ -170,7 +200,7 @@ Mat weftRegression(Mat im, int startRow, int endRow) {
 
 	//initialize the theta vector
 	Eigen::VectorXd theta(4);
-	theta << 233 / 2, 2 * 3.14 / 335, 0, 0;
+	theta << 233 / 3, 2 * 3.14 / 227, 0, 0;
 	//x.fill(4.0f);
 
 	MyFunctorNumericalDiff functor;
@@ -181,14 +211,34 @@ Mat weftRegression(Mat im, int startRow, int endRow) {
 	std::cout << "status: " << status << std::endl;
 
 	MatrixXd im_reg_mat = MatrixXd::Zero(im_mat.rows(), im_mat.cols());
-	for (int i = startRow; i <= endRow; i++) {
-		for (int j = 0; j < im_mat.cols(); j++) {
-			double x = j;
-			double y = theta(0)*sin(theta(1)*x + theta(2)) + theta(3);
-			cout << y << endl;
-			im_reg_mat(i,j) = y;
+	if (startRow == 0) {
+		for (int i = startRow; i <= endRow + overlap; i++) {
+			for (int j = 0; j < im_mat.cols(); j++) {
+				double x = j;
+				double y = theta(0)*sin(theta(1)*x + theta(2)) + theta(3);
+				im_reg_mat(i, j) = y;
+			}
 		}
 	}
+	else if (endRow == 670) {
+		for (int i = startRow - overlap; i <= endRow; i++) {
+			for (int j = 0; j < im_mat.cols(); j++) {
+				double x = j;
+				double y = theta(0)*sin(theta(1)*x + theta(2)) + theta(3);
+				im_reg_mat(i, j) = y;
+			}
+		}
+	}
+	else {
+		for (int i = startRow - overlap; i <= endRow + overlap; i++) {
+			for (int j = 0; j < im_mat.cols(); j++) {
+				double x = j;
+				double y = theta(0)*sin(theta(1)*x + theta(2)) + theta(3);
+				im_reg_mat(i, j) = y;
+			}
+		}
+	}
+		
 
 
 	Mat regIm, temp;
