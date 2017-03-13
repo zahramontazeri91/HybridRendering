@@ -108,19 +108,18 @@ int main(int argc, char** argv)
 	* ************************Regression section for each patch
 	*/
 	cout << "************************Regression section ************** " << endl;
-	vector<Mat> warpsReg;
-	vector<Mat> weftsReg;
+	vector<Mat> reg_morphed_patches;
 
-#if 0
-	regularization(warpsReg, weftsReg);
+#if 1
+	reg_morphed_patches = regularization(fixedPoints, padding);
 #else
 	///Read regularized patches so comment the regularization()
 	for (int i = 0; i <= 5; i++) {
-		weftsReg.push_back(imread("Regressioned Patches/reg_patch_" + to_string(i) + ".png", CV_LOAD_IMAGE_GRAYSCALE));
+		reg_morphed_patches.push_back(imread("Regressioned Patches/reg_patch_" + to_string(i) + ".png", CV_LOAD_IMAGE_GRAYSCALE));
 	}
 
 	for (int i = 6; i <= 12; i++) {
-		warpsReg.push_back(imread("Regressioned Patches/reg_patch_" + to_string(i) + ".png", CV_LOAD_IMAGE_GRAYSCALE));
+		reg_morphed_patches.push_back(imread("Regressioned Patches/reg_patch_" + to_string(i) + ".png", CV_LOAD_IMAGE_GRAYSCALE));
 	}
 #endif
 
@@ -137,45 +136,6 @@ int main(int argc, char** argv)
 	//}
 	//imshow("warps", reg_warps);
 
-
-	/// Numerate the patches in order
-	reg_yarns.push_back(weftsReg[0]);
-	reg_yarns.push_back(warpsReg[0]);
-	reg_yarns.push_back(weftsReg[3]);
-	reg_yarns.push_back(warpsReg[0]);
-
-	reg_yarns.push_back(warpsReg[1]);
-	reg_yarns.push_back(weftsReg[2]);
-	reg_yarns.push_back(warpsReg[1]);
-	reg_yarns.push_back(weftsReg[5]);
-
-	reg_yarns.push_back(warpsReg[2]);
-	reg_yarns.push_back(weftsReg[1]);
-	reg_yarns.push_back(warpsReg[2]);
-	reg_yarns.push_back(weftsReg[4]);
-	reg_yarns.push_back(warpsReg[2]);
-
-	reg_yarns.push_back(weftsReg[0]);
-	reg_yarns.push_back(warpsReg[3]);
-	reg_yarns.push_back(weftsReg[3]);
-	reg_yarns.push_back(warpsReg[3]);
-
-	reg_yarns.push_back(warpsReg[4]);
-	reg_yarns.push_back(weftsReg[2]);
-	reg_yarns.push_back(warpsReg[4]);
-	reg_yarns.push_back(weftsReg[5]);
-
-	reg_yarns.push_back(warpsReg[5]);
-	reg_yarns.push_back(weftsReg[1]);
-	reg_yarns.push_back(warpsReg[5]);
-	reg_yarns.push_back(weftsReg[4]);
-	reg_yarns.push_back(warpsReg[5]);
-
-	reg_yarns.push_back(weftsReg[0]);
-	reg_yarns.push_back(warpsReg[6]);
-	reg_yarns.push_back(weftsReg[3]);
-	reg_yarns.push_back(warpsReg[6]);
-
 	/*
 	* Undo_Morphing section for each patch
 	*/
@@ -184,8 +144,8 @@ int main(int argc, char** argv)
 
 	for (int i = 0; i < 30; i++) {
 		Mat morphed_yarn;
-		Mat reg_yarns_pad = ZeroPadding(reg_yarns[i], padding);
-		morphing(morphed_yarn, reg_yarns_pad, fixedPoints[i], movingPoints[i]);
+		Mat reg_patch_pad = ZeroPadding(reg_morphed_patches[i], padding);
+		morphing(morphed_yarn, reg_patch_pad, fixedPoints[i], movingPoints[i]);
 		///change the size of the results back to before padding
 		/// Crop the full image to that image contained by the rectangle myROI
 		cv::Mat cropped_morphed_yarn = morphed_yarn(myROI);
@@ -207,7 +167,7 @@ int main(int argc, char** argv)
 //		imwrite("Unmorphed Reg Yarns/unmorphed_reg_patch_" + std::to_string(i) + ".png", unmorphed_reg_patches[i]);
 
 	}
-	imshow("unmorphed_reg_patches[i]", unmorphed_reg_patches[14]);
+
 
 	/*
 	* Putting the patches together and blending

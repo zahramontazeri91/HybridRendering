@@ -23,9 +23,8 @@ using namespace Eigen;
 using namespace std;
 using namespace cv;
 
-int overlap = 30;
+int overlap = 1;
 int counter = 0;
-//Point2DVector GeneratePoints();
 
 // Generic functor
 template<typename _Scalar, int NX = Eigen::Dynamic, int NY = Eigen::Dynamic>
@@ -58,7 +57,8 @@ struct MyFunctor : Functor<double>
 		// "a" in the model is x(0), and "b" is x(1)
 		for (unsigned int i = 0; i < this->Points.size(); ++i)
 		{
-			fvec(i) = this->Points[i](1) - (x(0) * sin(x(1)*this->Points[i](0) + x(2)) + x(3));
+			//fvec(i) = this->Points[i](1) - (x(0) * sin(x(1)*this->Points[i](0) + x(2)) + x(3)); for sine-fitting
+			fvec(i) = this->Points[i](1) - (x(0)); //for constant-fitting
 		}
 
 		return 0;
@@ -66,7 +66,7 @@ struct MyFunctor : Functor<double>
 
 	Point2DVector Points;
 
-	int inputs() const { return 4; } // There are two parameters of the model
+	int inputs() const { return 1; } // There are two parameters of the model
 	int values() const { return this->Points.size(); } // The number of observations
 };
 
@@ -89,7 +89,7 @@ Point2DVector GeneratePoints(const unsigned int numberOfPoints)
 }
 
 
-Mat warpRegression(Mat im, int startCol, int endCol) {
+Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
 
 	MatrixXd im_mat;
 	cv2eigen(im, im_mat);
@@ -113,8 +113,8 @@ Mat warpRegression(Mat im, int startCol, int endCol) {
 	//Point2DVector points = GeneratePoints(numberOfPoints);
 
 	//initialize the theta vector
-	Eigen::VectorXd theta(4);
-	theta << 233/2, 2*3.14/335, 0, 0;
+	Eigen::VectorXd theta(1);
+	theta << 233 / 2;
 	//x.fill(4.0f);
 
 	MyFunctorNumericalDiff functor;
@@ -122,59 +122,67 @@ Mat warpRegression(Mat im, int startCol, int endCol) {
 	Eigen::LevenbergMarquardt<MyFunctorNumericalDiff> lm(functor);
 
 	Eigen::LevenbergMarquardtSpace::Status status = lm.minimize(theta);
-	std::cout << "status: " << status << std::endl;
+	//std::cout << "status: " << status << std::endl;
 
 	MatrixXd im_reg_mat = MatrixXd::Zero(im_mat.rows(), im_mat.cols());
-	if (startCol == 0) {
-		for (int i = startCol; i <= endCol + overlap; i++) {
-			for (int j = 0; j < im_mat.rows(); j++) {
-				double x = j;
-				double y = theta(0)*sin(theta(1)*x + theta(2)) + theta(3);
-				im_reg_mat(j, i) = y;
-			}
-		}
+
+	int min_col, max_col, min_row, max_row;
+	if (startCol == 0 && startRow == 0) {
+		//cout << "case1" << endl;
+		min_col = startCol;
+		min_row = startRow;
+		max_col = endCol + overlap;
+		max_row = endRow - overlap;
 	}
-	else if (endCol == 440) {
-		for (int i = startCol - overlap; i <= 456; i++) {
-			for (int j = 0; j < im_mat.rows(); j++) {
-				double x = j;
-				double y = theta(0)*sin(theta(1)*x + theta(2)) + theta(3);
-				im_reg_mat(j, i) = y;
-			}
-		}
+	else if (endCol == 456 && startRow == 0) {
+		//cout << "case2" << endl;
+		max_col = endCol;
+		min_row = startRow;
+		min_col = startCol - overlap;
+		max_row = endRow + overlap;
 	}
-	else if (endCol == 456) {
-		for (int i = startCol - overlap ; i <= endCol ; i++) {
-			for (int j = 0; j < im_mat.rows(); j++) {
-				double x = j;
-				double y = theta(0)*sin(theta(1)*x + theta(2)) + theta(3);
-				im_reg_mat(j, i) = y;
-			}
-		}
+	else if (startCol == 0 && endRow == 670) {
+		//cout << "case3" << endl;
+		min_col = startCol;
+		max_row = endRow;
+		max_col = endCol + overlap;
+		min_row = startRow - overlap;
+	}
+	else if (endCol == 456 && endRow == 670) {
+		//cout << "case 4" << endl;
+		max_col = endCol;
+		max_row = endRow;
+		min_col = startCol - overlap;
+		min_row = startRow - overlap;
 	}
 	else {
-		for (int i = startCol - overlap ; i <= endCol + overlap; i++) {
-			for (int j = 0; j < im_mat.rows(); j++) {
-				double x = j;
-				double y = theta(0)*sin(theta(1)*x + theta(2)) + theta(3);
-				im_reg_mat(j, i) = y;
-			}
+		min_col = startCol - overlap;
+		min_row = startRow - overlap;
+		max_col = endCol + overlap;
+		max_row = endRow + overlap;
+	}
+
+	for (int i = min_col  ; i < max_col ; i++) {
+		for (int j = min_row ; j < max_row ; j++) {
+			double x = j;
+			double y = theta(0);
+			im_reg_mat(j, i) = y;
 		}
 	}
 
 
 	Mat regIm, temp;
-	eigen2cv(im_reg_mat, temp);
+	cv::eigen2cv(im_reg_mat, temp);
 	temp.convertTo(regIm, CV_8UC1);
-	imshow("regularized", regIm);
-	imwrite("Regressioned Patches/reg_patch_" + std::to_string(counter) + ".png", regIm);
+	//imshow("regularized", regIm);
+	cv::imwrite("Regressioned Patches/reg_patch_" + std::to_string(counter) + ".png", regIm);
+	std::cout << "theta for patch_" + std::to_string(counter) << ":  " << theta << std::endl;
 	counter++;
 
-	std::cout << "x that minimizes the function: " << std::endl << theta << std::endl;
 	return regIm;
 }
 
-Mat weftRegression(Mat im, int startRow, int endRow) {
+Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
 
 	MatrixXd im_mat;
 	cv2eigen(im, im_mat);
@@ -184,7 +192,7 @@ Mat weftRegression(Mat im, int startRow, int endRow) {
 	//TO DO: make sure you changed the size of image back
 
 	for (int i = startRow; i <= endRow; i++) {
-		for (int j = 0; j < im_mat.cols(); j++) {
+		for (int j = startCol; j < endCol; j++) {
 			indx = j + row*im_mat.cols();
 			Eigen::Vector2d point;
 			point(0) = indx;
@@ -195,12 +203,10 @@ Mat weftRegression(Mat im, int startRow, int endRow) {
 		row++;
 	}
 
-	//unsigned int numberOfPoints = 200;
-	//Point2DVector points = GeneratePoints(numberOfPoints);
 
 	//initialize the theta vector
-	Eigen::VectorXd theta(4);
-	theta << 233 / 3, 2 * 3.14 / 227, 0, 0;
+	Eigen::VectorXd theta(1);
+	theta << 233 / 3;
 	//x.fill(4.0f);
 
 	MyFunctorNumericalDiff functor;
@@ -208,95 +214,87 @@ Mat weftRegression(Mat im, int startRow, int endRow) {
 	Eigen::LevenbergMarquardt<MyFunctorNumericalDiff> lm(functor);
 
 	Eigen::LevenbergMarquardtSpace::Status status = lm.minimize(theta);
-	std::cout << "status: " << status << std::endl;
+	//std::cout << "status: " << status << std::endl;
 
 	MatrixXd im_reg_mat = MatrixXd::Zero(im_mat.rows(), im_mat.cols());
-	if (startRow == 0) {
-		for (int i = startRow; i <= endRow + overlap; i++) {
-			for (int j = 0; j < im_mat.cols(); j++) {
-				double x = j;
-				double y = theta(0)*sin(theta(1)*x + theta(2)) + theta(3);
-				im_reg_mat(i, j) = y;
-			}
-		}
+
+	int min_col, max_col, min_row, max_row;
+	if (startCol == 1 && startRow == 1) {
+		//cout << "case1" << endl;
+		min_col = startCol;
+		min_row = startRow;
+		max_col = endCol + overlap;
+		max_row = endRow - overlap;
 	}
-	else if (endRow == 670) {
-		for (int i = startRow - overlap; i <= endRow; i++) {
-			for (int j = 0; j < im_mat.cols(); j++) {
-				double x = j;
-				double y = theta(0)*sin(theta(1)*x + theta(2)) + theta(3);
-				im_reg_mat(i, j) = y;
-			}
-		}
+	else if (endCol == 456 && startRow == 1) {
+		//cout << "case2" << endl;
+		max_col = endCol;
+		min_row = startRow;
+		min_col = startCol - overlap;
+		max_row = endRow + overlap;
+	}
+	else if (startCol == 1 && endRow == 670) {
+		//cout << "case3" << endl;
+		min_col = startCol;
+		max_row = endRow;
+		max_col = endCol + overlap;
+		min_row = startRow - overlap;
+	}
+	else if (endCol == 456 && endRow == 670) {
+		//cout << "case 4" << endl;
+		max_col = endCol;
+		max_row = endRow;
+		min_col = startCol - overlap;
+		min_row = startRow - overlap;
 	}
 	else {
-		for (int i = startRow - overlap; i <= endRow + overlap; i++) {
-			for (int j = 0; j < im_mat.cols(); j++) {
-				double x = j;
-				double y = theta(0)*sin(theta(1)*x + theta(2)) + theta(3);
-				im_reg_mat(i, j) = y;
-			}
+		//cout << "case 5" << endl;
+		min_col = startCol - overlap;
+		min_row = startRow - overlap;
+		max_col = endCol + overlap;
+		max_row = endRow + overlap;
+	}
+
+
+	for (int i = min_row; i < max_row ; i++) {
+		for (int j = min_col ; j < max_col ; j++) {
+			double x = j;
+			double y = theta(0);
+			im_reg_mat(i, j) = y;
 		}
 	}
-		
-
 
 	Mat regIm, temp;
-	eigen2cv(im_reg_mat, temp);
+	cv::eigen2cv(im_reg_mat, temp);
 	temp.convertTo(regIm, CV_8UC1);
-	imshow("regularized", regIm);
-	imwrite("Regressioned Patches/reg_patch_" + std::to_string(counter) + ".png", regIm);
+	//imshow("regularized", regIm);
+	cv::imwrite("Regressioned Patches/reg_patch_" + std::to_string(counter) + ".png", regIm);
+	std::cout << "theta for patch_" + std::to_string(counter) << ":  " << theta << std::endl;
 	counter++;
 
-	std::cout << "x that minimizes the function: " << std::endl << theta << std::endl;
 	return regIm;
 }
 
-void regularization(vector<Mat> morphed_patches, vector<Mat>& warpsReg, vector<Mat>& weftsReg);
-void regularization(vector<Mat>& warpsReg, vector<Mat>& weftsReg) {
+vector<Mat> regularization(vector<Mat> morphed_patches, vector < vector<Point> > fixedPoints, int padding);
+vector<Mat> regularization(vector < vector<Point> > fixedPoints, int padding ) {
 	vector<Mat> morphed_patches;
 	for (int i = 0; i < 30; i++) {
 		morphed_patches.push_back(imread("Morphed Patches/morphed_patch_" + std::to_string(i) + ".png", CV_LOAD_IMAGE_GRAYSCALE));
 	}
-	regularization(morphed_patches, warpsReg, weftsReg);
-	return;
+	vector<Mat> reg_morphed_patches = regularization(morphed_patches, fixedPoints, padding);
+	return reg_morphed_patches;
 }
-void regularization(vector<Mat> morphed_patches, vector<Mat>& warpsReg, vector<Mat>& weftsReg) {
+vector<Mat> regularization(vector<Mat> morphed_patches, vector < vector<Point> > fixedPoints, int padding) {
 
-	///putting together the patches from same yarn
-	vector<Mat> warps;
-	vector<Mat> wefts;
+	vector<Mat> reg_morphed_patches;
 
-	warps.push_back(morphed_patches[1] + morphed_patches[3]);
-	warps.push_back(morphed_patches[4] + morphed_patches[6]);
-	warps.push_back(morphed_patches[8] + morphed_patches[10] + morphed_patches[12]);
-	warps.push_back(morphed_patches[14] + morphed_patches[16]);
-	warps.push_back(morphed_patches[17] + morphed_patches[19]);
-	warps.push_back(morphed_patches[21] + morphed_patches[23] + morphed_patches[25]);
-	warps.push_back(morphed_patches[27] + morphed_patches[29]);
+	for (int i = 0; i < 30; i++) {
 
-	wefts.push_back(morphed_patches[0] + morphed_patches[13] + morphed_patches[26]);
-	wefts.push_back(morphed_patches[9] + morphed_patches[22]);
-	wefts.push_back(morphed_patches[5] + morphed_patches[18]);
-	wefts.push_back(morphed_patches[2] + morphed_patches[15] + morphed_patches[28]);
-	wefts.push_back(morphed_patches[11] + morphed_patches[24]);
-	wefts.push_back(morphed_patches[7] + morphed_patches[20]);
+		reg_morphed_patches.push_back(weftRegression(morphed_patches[i], fixedPoints[i][0].x - padding, fixedPoints[i][3].x - padding, fixedPoints[i][0].y - padding, fixedPoints[i][3].y - padding));
+		i++;
+		reg_morphed_patches.push_back(warpRegression(morphed_patches[i], fixedPoints[i][0].x - padding, fixedPoints[i][3].x - padding, fixedPoints[i][0].y - padding, fixedPoints[i][3].y - padding) );	
+		
+	}
 
-	///Apply the regression of each yarn
-	weftsReg.push_back(weftRegression(wefts[0], 0, 115));
-	weftsReg.push_back(weftRegression(wefts[1], 115, 220));
-	weftsReg.push_back(weftRegression(wefts[2], 220, 335));
-	weftsReg.push_back(weftRegression(wefts[3], 335, 440));
-	weftsReg.push_back(weftRegression(wefts[4], 440, 565));
-	weftsReg.push_back(weftRegression(wefts[5], 565, 670));
-
-	warpsReg.push_back(warpRegression(warps[0], 0 , 50));
-	warpsReg.push_back(warpRegression(warps[1], 50, 134));
-	warpsReg.push_back(warpRegression(warps[2], 134,227));
-	warpsReg.push_back(warpRegression(warps[3], 227, 290));
-	warpsReg.push_back(warpRegression(warps[4], 290, 360));
-	warpsReg.push_back(warpRegression(warps[5], 360, 440));
-	warpsReg.push_back(warpRegression(warps[6], 440,456));
-
-	return;
+	return reg_morphed_patches;
 }

@@ -8,9 +8,7 @@
 using namespace cv;
 using namespace std;
 
-void regularization(vector<Mat>& warpsReg, vector<Mat>& weftsReg);
-void regularization(vector<Mat> morphed_patches, vector<Mat>& warpsReg, vector<Mat>& weftsReg);
-Mat warpRegression(Mat im, int startCol, int endCol);
-Mat weftRegression(Mat im, int startCol, int endCol);
+vector<Mat> regularization(vector<Mat> morphed_patches, vector < vector<Point> > fixedPoints, int padding );
+vector<Mat> regularization(vector < vector<Point> > fixedPoints, int padding);
 
 #endif
