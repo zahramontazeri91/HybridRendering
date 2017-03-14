@@ -83,7 +83,6 @@ int main(int argc, char** argv)
 	}
 
 
-
 	/*
 	* morphing section using the control points for each patch
 	*/
@@ -198,7 +197,7 @@ int main(int argc, char** argv)
 	residual = grayImage - regularized;
 	imshow("Residual Map", residual);
 
-
+	imshow("Height Map", grayImage);
 	//////******************************* Masking section
 	///// now let's separate out the patches from regularized yarns
 	//Mat temp;

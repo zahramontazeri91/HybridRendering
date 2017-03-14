@@ -96,10 +96,12 @@ Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
 
 	Point2DVector points;
 	int indx, col =0;
-	//TO DO: make sure you changed the size of image back
+
+	int transition=  int( (50.0 / 100.0) * (endRow - startRow) );
+ 
 	for (int i = startCol; i <= endCol; i++) {
-		for (int j = 0; j < im_mat.rows(); j++) {
-			indx = j + col*im_mat.rows();
+		for (int j = startRow + transition; j <= endRow - transition; j++) {
+			indx = j + col*(endRow - startRow) + 1;
 			Eigen::Vector2d point;
 			point(0) = indx;
 			point(1) = im_mat(j,i);
@@ -162,11 +164,29 @@ Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
 		max_row = endRow + overlap;
 	}
 
-	for (int i = min_col  ; i < max_col ; i++) {
-		for (int j = min_row ; j < max_row ; j++) {
-			double x = j;
-			double y = theta(0);
-			im_reg_mat(j, i) = y;
+	//for (int i = min_col; i < max_col; i++) {
+	//	for (int j = startRow + transition; j < endRow - transition; j++) {
+	//		double x = j;
+	//		double y = theta(0);
+	//		im_reg_mat(j, i) = y;
+	//	}
+	//}
+
+	//cout << "min_row " << min_row << "startRow " << startRow << "startRow + transition " << startRow + transition << "endRow - transition " << endRow - transition << "endRow " << endRow << "max_row " << max_row << endl;
+	double d = startRow + transition - min_row ;
+	for (int i = min_col; i < max_col; i++) {
+		double x = 0;
+		for (int j = min_row; j <= startRow + transition; j++) {
+			im_reg_mat(j, i) = (theta(0)/2.0) * tanh(4.0/d* (x-d/2) ) + (theta(0)/2.0);
+			x++;
+		}
+	}
+
+	for (int i = min_col; i < max_col; i++) {
+		double x = 0;
+		for (int j = endRow - transition; j < max_row ; j++) {
+			im_reg_mat(j, i) = (theta(0) / 2.0) * tanh(-1 * 4.0 / d* (x - d / 2)) + (theta(0) / 2.0);
+			x++;
 		}
 	}
 
@@ -176,7 +196,7 @@ Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
 	temp.convertTo(regIm, CV_8UC1);
 	//imshow("regularized", regIm);
 	cv::imwrite("Regressioned Patches/reg_patch_" + std::to_string(counter) + ".png", regIm);
-	std::cout << "theta for patch_" + std::to_string(counter) << ":  " << theta << std::endl;
+	std::cout << "theta for warp patch_" + std::to_string(counter) << ":  " << theta << std::endl;
 	counter++;
 
 	return regIm;
@@ -189,16 +209,15 @@ Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
 
 	Point2DVector points;
 	int indx, row = 0;
-	//TO DO: make sure you changed the size of image back
 
+	int transition = (50.0 / 100.0) * (endCol - startCol);
 	for (int i = startRow; i <= endRow; i++) {
-		for (int j = startCol; j < endCol; j++) {
-			indx = j + row*im_mat.cols();
+		for (int j = startCol + transition ; j <= endCol - transition; j++) {
+			indx = j + row* (endCol - startCol) + 1;
 			Eigen::Vector2d point;
 			point(0) = indx;
 			point(1) = im_mat(i,j);
 			points.push_back(point);
-
 		}
 		row++;
 	}
@@ -255,12 +274,21 @@ Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
 		max_row = endRow + overlap;
 	}
 
+	double d = startCol + transition - min_col;
+	for (int i = min_row; i < max_row; i++) {
+		double x = 0;
+		for (int j = min_col; j <= startCol + transition; j++) {
+			im_reg_mat(i, j) = (theta(0) / 2.0) * tanh( 4.0 / d* (x - d / 2)) + (theta(0) / 2.0);
+			x++;
+		}
+	}
+
 
 	for (int i = min_row; i < max_row ; i++) {
-		for (int j = min_col ; j < max_col ; j++) {
-			double x = j;
-			double y = theta(0);
-			im_reg_mat(i, j) = y;
+		double x = 0;
+		for (int j = endCol - transition ; j < max_col ; j++) {
+			im_reg_mat(i, j) = (theta(0) / 2.0) * tanh(-1 * 4.0 / d* (x - d / 2)) + (theta(0) / 2.0);
+			x++;
 		}
 	}
 
@@ -269,7 +297,7 @@ Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
 	temp.convertTo(regIm, CV_8UC1);
 	//imshow("regularized", regIm);
 	cv::imwrite("Regressioned Patches/reg_patch_" + std::to_string(counter) + ".png", regIm);
-	std::cout << "theta for patch_" + std::to_string(counter) << ":  " << theta << std::endl;
+	std::cout << "theta for weft patch_" + std::to_string(counter) << ":  " << theta << std::endl;
 	counter++;
 
 	return regIm;
@@ -288,12 +316,42 @@ vector<Mat> regularization(vector<Mat> morphed_patches, vector < vector<Point> >
 
 	vector<Mat> reg_morphed_patches;
 
-	for (int i = 0; i < 30; i++) {
+	for (int i = 0; i <= 3; i++) {
 
 		reg_morphed_patches.push_back(weftRegression(morphed_patches[i], fixedPoints[i][0].x - padding, fixedPoints[i][3].x - padding, fixedPoints[i][0].y - padding, fixedPoints[i][3].y - padding));
+
 		i++;
-		reg_morphed_patches.push_back(warpRegression(morphed_patches[i], fixedPoints[i][0].x - padding, fixedPoints[i][3].x - padding, fixedPoints[i][0].y - padding, fixedPoints[i][3].y - padding) );	
+
+		if (i > 3) break;
+		reg_morphed_patches.push_back(warpRegression(morphed_patches[i], fixedPoints[i][0].x - padding, fixedPoints[i][3].x - padding, fixedPoints[i][0].y - padding, fixedPoints[i][3].y - padding));
 		
+
+	}
+	//cout << "first loop" << endl;
+	for (int i = 4; i <= 16; i++) {
+
+		reg_morphed_patches.push_back(warpRegression(morphed_patches[i], fixedPoints[i][0].x - padding, fixedPoints[i][3].x - padding, fixedPoints[i][0].y - padding, fixedPoints[i][3].y - padding));
+		//cout << " p0 " << fixedPoints[i][0].x - padding << " " << fixedPoints[i][0].y - padding << endl <<
+		//	" p1 " << fixedPoints[i][1].x - padding << "  " << fixedPoints[i][1].y - padding << endl <<
+		//	" p2 " << fixedPoints[i][2].x - padding << "  " << fixedPoints[i][2].y - padding << endl <<
+		//	" p3 " << fixedPoints[i][3].x - padding << "  " << fixedPoints[i][3].y - padding << endl;
+
+		i++;
+
+		if (i > 16) break;
+		reg_morphed_patches.push_back(weftRegression(morphed_patches[i], fixedPoints[i][0].x - padding, fixedPoints[i][3].x - padding, fixedPoints[i][0].y - padding, fixedPoints[i][3].y - padding) );
+		
+	}
+	//cout << "second loop" << endl;
+	for (int i = 17 ; i <= 29; i++) {
+
+		reg_morphed_patches.push_back(warpRegression(morphed_patches[i], fixedPoints[i][0].x - padding, fixedPoints[i][3].x - padding, fixedPoints[i][0].y - padding, fixedPoints[i][3].y - padding));
+
+		i++;
+
+		if (i > 29) break;
+		reg_morphed_patches.push_back(weftRegression(morphed_patches[i], fixedPoints[i][0].x - padding, fixedPoints[i][3].x - padding, fixedPoints[i][0].y - padding, fixedPoints[i][3].y - padding));
+
 	}
 
 	return reg_morphed_patches;
