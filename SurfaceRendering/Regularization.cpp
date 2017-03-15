@@ -58,7 +58,8 @@ struct MyFunctor : Functor<double>
 		for (unsigned int i = 0; i < this->Points.size(); ++i)
 		{
 			//fvec(i) = this->Points[i](1) - (x(0) * sin(x(1)*this->Points[i](0) + x(2)) + x(3)); for sine-fitting
-			fvec(i) = this->Points[i](1) - (x(0)); //for constant-fitting
+			//fvec(i) = this->Points[i](1) - (x(0)); //for constant-fitting 
+			fvec(i) = this->Points[i](1) - (x(0) * tanh(x(1)*(this->Points[i](0) + x(2))) + x(0)); //two back-to-back tanh fitting
 		}
 
 		return 0;
@@ -66,7 +67,7 @@ struct MyFunctor : Functor<double>
 
 	Point2DVector Points;
 
-	int inputs() const { return 1; } // There are two parameters of the model
+	int inputs() const { return 3; } // There are two parameters of the model
 	int values() const { return this->Points.size(); } // The number of observations
 };
 
@@ -90,43 +91,6 @@ Point2DVector GeneratePoints(const unsigned int numberOfPoints)
 
 
 Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
-
-	MatrixXd im_mat;
-	cv2eigen(im, im_mat);
-
-	Point2DVector points;
-	int indx, col =0;
-
-	int transition=  int( (50.0 / 100.0) * (endRow - startRow) );
- 
-	for (int i = startCol; i <= endCol; i++) {
-		for (int j = startRow + transition; j <= endRow - transition; j++) {
-			indx = j + col*(endRow - startRow) + 1;
-			Eigen::Vector2d point;
-			point(0) = indx;
-			point(1) = im_mat(j,i);
-			points.push_back(point);
-
-		}
-		col++;
-	}
-
-	//unsigned int numberOfPoints = 200;
-	//Point2DVector points = GeneratePoints(numberOfPoints);
-
-	//initialize the theta vector
-	Eigen::VectorXd theta(1);
-	theta << 233 / 2;
-	//x.fill(4.0f);
-
-	MyFunctorNumericalDiff functor;
-	functor.Points = points;
-	Eigen::LevenbergMarquardt<MyFunctorNumericalDiff> lm(functor);
-
-	Eigen::LevenbergMarquardtSpace::Status status = lm.minimize(theta);
-	//std::cout << "status: " << status << std::endl;
-
-	MatrixXd im_reg_mat = MatrixXd::Zero(im_mat.rows(), im_mat.cols());
 
 	int min_col, max_col, min_row, max_row;
 	if (startCol == 0 && startRow == 0) {
@@ -164,6 +128,45 @@ Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
 		max_row = endRow + overlap;
 	}
 
+	MatrixXd im_mat;
+	cv2eigen(im, im_mat);
+
+	Point2DVector points;
+	int indx, col =0;
+
+	int transition=  int( (50.0 / 100.0) * (endRow - startRow) );
+ 
+	for (int i = startCol; i <= endCol; i++) {
+		indx = 0;
+		for (int j = startRow; j <= startRow + transition; j++) {
+			//indx = j + col*(endRow - startRow) + 1;
+			Eigen::Vector2d point;
+			point(0) = indx;
+			point(1) = im_mat(j,i);
+			points.push_back(point);
+			indx++;
+		}
+		col++;
+	}
+
+	//unsigned int numberOfPoints = 200;
+	//Point2DVector points = GeneratePoints(numberOfPoints);
+
+	//initialize the theta vector
+	Eigen::VectorXd theta(3);
+	//(theta(0)/2.0) * tanh(4.0/d* (x-d/2) ) + (theta(0)/2.0)
+	theta << 170.0 / 2.0, 4.0/44, -1.0* (44.0/2.0);
+	//x.fill(4.0f);
+
+	MyFunctorNumericalDiff functor;
+	functor.Points = points;
+	Eigen::LevenbergMarquardt<MyFunctorNumericalDiff> lm(functor);
+
+	Eigen::LevenbergMarquardtSpace::Status status = lm.minimize(theta);
+	//std::cout << "status: " << status << std::endl;
+
+	MatrixXd im_reg_mat = MatrixXd::Zero(im_mat.rows(), im_mat.cols());
+
 	//for (int i = min_col; i < max_col; i++) {
 	//	for (int j = startRow + transition; j < endRow - transition; j++) {
 	//		double x = j;
@@ -177,7 +180,7 @@ Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
 	for (int i = min_col; i < max_col; i++) {
 		double x = 0;
 		for (int j = min_row; j <= startRow + transition; j++) {
-			im_reg_mat(j, i) = (theta(0)/2.0) * tanh(4.0/d* (x-d/2) ) + (theta(0)/2.0);
+			im_reg_mat(j, i) = (theta(0)) * tanh(theta(1)* (x + theta(2)) ) + (theta(0));
 			x++;
 		}
 	}
@@ -185,7 +188,7 @@ Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
 	for (int i = min_col; i < max_col; i++) {
 		double x = 0;
 		for (int j = endRow - transition; j < max_row ; j++) {
-			im_reg_mat(j, i) = (theta(0) / 2.0) * tanh(-1 * 4.0 / d* (x - d / 2)) + (theta(0) / 2.0);
+			im_reg_mat(j, i) = (theta(0)) * tanh(-1 * theta(1)* (x + theta(2))) + (theta(0));
 			x++;
 		}
 	}
@@ -196,46 +199,13 @@ Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
 	temp.convertTo(regIm, CV_8UC1);
 	//imshow("regularized", regIm);
 	cv::imwrite("Regressioned Patches/reg_patch_" + std::to_string(counter) + ".png", regIm);
-	std::cout << "theta for warp patch_" + std::to_string(counter) << ":  " << theta << std::endl;
+	std::cout << "theta for warp patch_" + std::to_string(counter) << ":  " << endl<< theta << std::endl;
 	counter++;
 
 	return regIm;
 }
 
 Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
-
-	MatrixXd im_mat;
-	cv2eigen(im, im_mat);
-
-	Point2DVector points;
-	int indx, row = 0;
-
-	int transition = (50.0 / 100.0) * (endCol - startCol);
-	for (int i = startRow; i <= endRow; i++) {
-		for (int j = startCol + transition ; j <= endCol - transition; j++) {
-			indx = j + row* (endCol - startCol) + 1;
-			Eigen::Vector2d point;
-			point(0) = indx;
-			point(1) = im_mat(i,j);
-			points.push_back(point);
-		}
-		row++;
-	}
-
-
-	//initialize the theta vector
-	Eigen::VectorXd theta(1);
-	theta << 233 / 3;
-	//x.fill(4.0f);
-
-	MyFunctorNumericalDiff functor;
-	functor.Points = points;
-	Eigen::LevenbergMarquardt<MyFunctorNumericalDiff> lm(functor);
-
-	Eigen::LevenbergMarquardtSpace::Status status = lm.minimize(theta);
-	//std::cout << "status: " << status << std::endl;
-
-	MatrixXd im_reg_mat = MatrixXd::Zero(im_mat.rows(), im_mat.cols());
 
 	int min_col, max_col, min_row, max_row;
 	if (startCol == 1 && startRow == 1) {
@@ -274,30 +244,66 @@ Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
 		max_row = endRow + overlap;
 	}
 
-	double d = startCol + transition - min_col;
-	for (int i = min_row; i < max_row; i++) {
-		double x = 0;
-		for (int j = min_col; j <= startCol + transition; j++) {
-			im_reg_mat(i, j) = (theta(0) / 2.0) * tanh( 4.0 / d* (x - d / 2)) + (theta(0) / 2.0);
-			x++;
+	MatrixXd im_mat;
+	cv2eigen(im, im_mat);
+
+	Point2DVector points;
+	int indx, row = 0;
+
+	int transition = (50.0 / 100.0) * (endCol - startCol);
+	for (int i = startRow; i <= endRow; i++) {
+		indx = 0;
+		for (int j = startCol; j <= startCol + transition; j++ ) {
+			//indx = j + row* (endCol - startCol) + 1;
+			Eigen::Vector2d point;
+			point(0) = indx;
+			point(1) = im_mat(i,j);
+			points.push_back(point);
+			indx++;
 		}
+		row++;
 	}
 
 
-	for (int i = min_row; i < max_row ; i++) {
-		double x = 0;
-		for (int j = endCol - transition ; j < max_col ; j++) {
-			im_reg_mat(i, j) = (theta(0) / 2.0) * tanh(-1 * 4.0 / d* (x - d / 2)) + (theta(0) / 2.0);
-			x++;
-		}
-	}
+	//initialize the theta vector
+	Eigen::VectorXd theta(3);
+	theta << 170 / 2, 4.0 / 44, -1.0* (44 / 2);
+	//x.fill(4.0f);
+
+	MyFunctorNumericalDiff functor;
+	functor.Points = points;
+	Eigen::LevenbergMarquardt<MyFunctorNumericalDiff> lm(functor);
+
+	Eigen::LevenbergMarquardtSpace::Status status = lm.minimize(theta);
+	//std::cout << "status: " << status << std::endl;
+
+	MatrixXd im_reg_mat = MatrixXd::Zero(im_mat.rows(), im_mat.cols());
+
+	//double d = startCol + transition - min_col;
+	//for (int i = min_row; i < max_row; i++) {
+	//	double x = 0;
+	//	for (int j = min_col; j <= startCol + transition; j++) {
+	//		//im_reg_mat(i, j) = (theta(0) / 2.0) * tanh( 4.0 / d* (x - d / 2)) + (theta(0) / 2.0);
+	//		im_reg_mat(i, j) = (theta(0)) * tanh(theta(1)* (x + theta(2))) + (theta(0));
+	//		x++;
+	//	}
+	//}
+
+
+	//for (int i = min_row; i < max_row ; i++) {
+	//	double x = 0;
+	//	for (int j = endCol - transition ; j < max_col ; j++) {
+	//		im_reg_mat(i, j) = (theta(0)) * tanh(-1 * theta(1)* (x + theta(2))) + (theta(0));
+	//		x++;
+	//	}
+	//}
 
 	Mat regIm, temp;
 	cv::eigen2cv(im_reg_mat, temp);
 	temp.convertTo(regIm, CV_8UC1);
 	//imshow("regularized", regIm);
 	cv::imwrite("Regressioned Patches/reg_patch_" + std::to_string(counter) + ".png", regIm);
-	std::cout << "theta for weft patch_" + std::to_string(counter) << ":  " << theta << std::endl;
+	std::cout << "theta for weft patch_" + std::to_string(counter) << ":  "<< endl << theta << std::endl;
 	counter++;
 
 	return regIm;
