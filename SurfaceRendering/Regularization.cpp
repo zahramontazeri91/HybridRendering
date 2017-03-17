@@ -59,7 +59,7 @@ struct MyFunctor : Functor<double>
 		{
 			//fvec(i) = this->Points[i](1) - (x(0) * sin(x(1)*this->Points[i](0) + x(2)) + x(3)); for sine-fitting
 			//fvec(i) = this->Points[i](1) - (x(0)); //for constant-fitting 
-			fvec(i) = this->Points[i](1) - (x(0) * tanh(x(1)*(this->Points[i](0) + x(2))) + x(0)); //two back-to-back tanh fitting
+			fvec(i) = this->Points[i](1) - (x(0) * tanh(x(1)*(this->Points[i](0) + x(2))) + x(3)); //two back-to-back tanh fitting
 		}
 
 		return 0;
@@ -67,59 +67,68 @@ struct MyFunctor : Functor<double>
 
 	Point2DVector Points;
 
-	int inputs() const { return 3; } // There are two parameters of the model
+	int inputs() const { return 4; } // There are two parameters of the model
 	int values() const { return this->Points.size(); } // The number of observations
 };
 
 struct MyFunctorNumericalDiff : Eigen::NumericalDiff<MyFunctor> {};
 
-Point2DVector GeneratePoints(const unsigned int numberOfPoints)
-{
-	Point2DVector points;
-	// Model y = 2*x + 5 with some noise (meaning that the resulting minimization should be about (2,5)
-	for (unsigned int i = 0; i < numberOfPoints; ++i)
-	{
-		double x = static_cast<double>(i);
-		Eigen::Vector2d point;
-		point(0) = x;
-		point(1) = 50 * sin(2 * x + 1) + 50;
-		points.push_back(point);
-	}
-
-	return points;
-}
-
 
 Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
 
+
 	int min_col, max_col, min_row, max_row;
-	if (startCol == 0 && startRow == 0) {
-		//cout << "case1" << endl;
+	if (startCol == 1) {
 		min_col = startCol;
-		min_row = startRow;
+		min_row = startRow - overlap;
 		max_col = endCol + overlap;
-		max_row = endRow - overlap;
+		max_row = endRow + overlap;
+
+		if (startRow == 1) {
+			min_row = startRow;
+		}
+		if (endRow == 670) {
+			max_row = endRow;
+		}
 	}
-	else if (endCol == 456 && startRow == 0) {
-		//cout << "case2" << endl;
+	else if (endCol == 456) {
 		max_col = endCol;
-		min_row = startRow;
+		min_row = startRow - overlap;
 		min_col = startCol - overlap;
 		max_row = endRow + overlap;
+
+		if (startRow == 1) {
+			min_row = startRow;
+		}
+		if (endRow == 670) {
+			max_row = endRow;
+		}
 	}
-	else if (startCol == 0 && endRow == 670) {
-		//cout << "case3" << endl;
-		min_col = startCol;
-		max_row = endRow;
-		max_col = endCol + overlap;
-		min_row = startRow - overlap;
-	}
-	else if (endCol == 456 && endRow == 670) {
-		//cout << "case 4" << endl;
-		max_col = endCol;
-		max_row = endRow;
+	else if (startRow == 1) {
+		min_row = startRow;
 		min_col = startCol - overlap;
+		max_col = endCol + overlap;
+		max_row = endRow + overlap;
+
+		if (startCol == 1) {
+			min_col = startCol;
+		}
+		if (endCol == 456) {
+			max_col = endCol;
+		}
+	}
+	else if (endRow == 670) {
+		max_row = endRow;
 		min_row = startRow - overlap;
+		min_col = startCol - overlap;
+		max_col = endCol + overlap;
+
+		if (startCol == 1) {
+			min_col = startCol;
+		}
+		if (endCol == 456) {
+			max_col = endCol;
+		}
 	}
 	else {
 		min_col = startCol - overlap;
@@ -128,13 +137,14 @@ Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
 		max_row = endRow + overlap;
 	}
 
+
 	MatrixXd im_mat;
 	cv2eigen(im, im_mat);
 
 	Point2DVector points;
 	int indx, col =0;
 
-	int transition=  int( (50.0 / 100.0) * (endRow - startRow) );
+	int transition=  int( (30.0 / 100.0) * (endRow - startRow) );
  
 	for (int i = startCol; i <= endCol; i++) {
 		indx = 0;
@@ -153,9 +163,10 @@ Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
 	//Point2DVector points = GeneratePoints(numberOfPoints);
 
 	//initialize the theta vector
-	Eigen::VectorXd theta(3);
+	Eigen::VectorXd theta(4);
+	double d = startRow + transition - min_row;
 	//(theta(0)/2.0) * tanh(4.0/d* (x-d/2) ) + (theta(0)/2.0)
-	theta << 170.0 / 2.0, 4.0/44, -1.0* (44.0/2.0);
+	theta << 170.0 / 2.0, 4.0/d, -1.0 * (d/2.0), 170.0 / 2.0;
 	//x.fill(4.0f);
 
 	MyFunctorNumericalDiff functor;
@@ -167,32 +178,31 @@ Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
 
 	MatrixXd im_reg_mat = MatrixXd::Zero(im_mat.rows(), im_mat.cols());
 
-	//for (int i = min_col; i < max_col; i++) {
-	//	for (int j = startRow + transition; j < endRow - transition; j++) {
-	//		double x = j;
-	//		double y = theta(0);
-	//		im_reg_mat(j, i) = y;
-	//	}
-	//}
-
 	//cout << "min_row " << min_row << "startRow " << startRow << "startRow + transition " << startRow + transition << "endRow - transition " << endRow - transition << "endRow " << endRow << "max_row " << max_row << endl;
-	double d = startRow + transition - min_row ;
+
+	double x;
 	for (int i = min_col; i < max_col; i++) {
-		double x = 0;
-		for (int j = min_row; j <= startRow + transition; j++) {
-			im_reg_mat(j, i) = (theta(0)) * tanh(theta(1)* (x + theta(2)) ) + (theta(0));
-			x++;
+		x = 0;
+		for (int j = min_row; j < startRow + transition; j++) {
+			im_reg_mat(j, i) = (theta(0)) * tanh(theta(1)* (x + theta(2)) ) + (theta(3));
+			if (j >= startRow) x++;   // in order to copy the first value for the overlapping region 
+		}
+	}
+
+	// in order to copy the last value for the constant region in the middle 
+	for (int i = min_col; i < max_col; i++) {
+		for (int j = startRow + transition; j < endRow - transition; j++) {
+			im_reg_mat(j, i) = (theta(0)) * tanh(theta(1)* (x + theta(2))) + (theta(3));
 		}
 	}
 
 	for (int i = min_col; i < max_col; i++) {
-		double x = 0;
+		x = 0;
 		for (int j = endRow - transition; j < max_row ; j++) {
-			im_reg_mat(j, i) = (theta(0)) * tanh(-1 * theta(1)* (x + theta(2))) + (theta(0));
-			x++;
+			im_reg_mat(j, i) = (theta(0)) * tanh(-1 * theta(1)* (x + theta(2))) + (theta(3));
+			if (j <= endRow) x++;
 		}
 	}
-
 
 	Mat regIm, temp;
 	cv::eigen2cv(im_reg_mat, temp);
@@ -208,36 +218,59 @@ Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
 Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
 
 	int min_col, max_col, min_row, max_row;
-	if (startCol == 1 && startRow == 1) {
-		//cout << "case1" << endl;
+	if (startCol == 1) {
 		min_col = startCol;
-		min_row = startRow;
+		min_row = startRow - overlap;
 		max_col = endCol + overlap;
-		max_row = endRow - overlap;
+		max_row = endRow + overlap;
+
+		if (startRow == 1) {
+			min_row = startRow;
+		}
+		if (endRow == 670) {
+			max_row = endRow;
+		}
 	}
-	else if (endCol == 456 && startRow == 1) {
-		//cout << "case2" << endl;
+	else if (endCol == 456) {
 		max_col = endCol;
-		min_row = startRow;
+		min_row = startRow - overlap;
 		min_col = startCol - overlap;
 		max_row = endRow + overlap;
+
+		if (startRow == 1) {
+			min_row = startRow;
+		}
+		if (endRow == 670) {
+			max_row = endRow;
+		}
 	}
-	else if (startCol == 1 && endRow == 670) {
-		//cout << "case3" << endl;
-		min_col = startCol;
-		max_row = endRow;
-		max_col = endCol + overlap;
-		min_row = startRow - overlap;
-	}
-	else if (endCol == 456 && endRow == 670) {
-		//cout << "case 4" << endl;
-		max_col = endCol;
-		max_row = endRow;
+	else if (startRow == 1) {
+		min_row = startRow;
 		min_col = startCol - overlap;
+		max_col = endCol + overlap;
+		max_row = endRow + overlap;
+
+		if (startCol == 1) {
+			min_col = startCol;
+		}
+		if (endCol == 456) {
+			max_col = endCol;
+		}
+	}
+	else if (endRow == 670) {
+		max_row = endRow;
 		min_row = startRow - overlap;
+		min_col = startCol - overlap;
+		max_col = endCol + overlap;
+
+		if (startCol == 1) {
+			min_col = startCol;
+		}
+		if (endCol == 456) {
+			max_col = endCol;
+		}
 	}
 	else {
-		//cout << "case 5" << endl;
 		min_col = startCol - overlap;
 		min_row = startRow - overlap;
 		max_col = endCol + overlap;
@@ -250,7 +283,7 @@ Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
 	Point2DVector points;
 	int indx, row = 0;
 
-	int transition = (50.0 / 100.0) * (endCol - startCol);
+	int transition = (20.0 / 100.0) * (endCol - startCol);
 	for (int i = startRow; i <= endRow; i++) {
 		indx = 0;
 		for (int j = startCol; j <= startCol + transition; j++ ) {
@@ -266,8 +299,8 @@ Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
 
 
 	//initialize the theta vector
-	Eigen::VectorXd theta(3);
-	theta << 170 / 2, 4.0 / 44, -1.0* (44 / 2);
+	Eigen::VectorXd theta(4);
+	theta << 170 / 2, 4.0 / 44, -1.0* (44 / 2), 170 / 2;
 	//x.fill(4.0f);
 
 	MyFunctorNumericalDiff functor;
@@ -279,24 +312,31 @@ Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
 
 	MatrixXd im_reg_mat = MatrixXd::Zero(im_mat.rows(), im_mat.cols());
 
-	//double d = startCol + transition - min_col;
-	//for (int i = min_row; i < max_row; i++) {
-	//	double x = 0;
-	//	for (int j = min_col; j <= startCol + transition; j++) {
-	//		//im_reg_mat(i, j) = (theta(0) / 2.0) * tanh( 4.0 / d* (x - d / 2)) + (theta(0) / 2.0);
-	//		im_reg_mat(i, j) = (theta(0)) * tanh(theta(1)* (x + theta(2))) + (theta(0));
-	//		x++;
-	//	}
-	//}
+	double d = startCol + transition - min_col;
+	double x;
+	for (int i = min_row; i < max_row; i++) {
+		x = 0;
+		for (int j = min_col; j < startCol + transition; j++) {
+			//im_reg_mat(i, j) = (theta(0) / 2.0) * tanh( 4.0 / d* (x - d / 2)) + (theta(0) / 2.0);
+			im_reg_mat(i, j) = (theta(0)) * tanh(theta(1)* (x + theta(2))) + (theta(3));
+			if (j >= startCol) x++;	// in order to copy the first value for the overlapping region 
+		}
+	}
 
+	// in order to copy the last value for the constant region in the middle 
+	for (int i = min_row; i < max_row; i++) {
+		for (int j = startCol + transition; j < endCol - transition; j++) {
+			im_reg_mat(i, j) = (theta(0)) * tanh(theta(1)* (x + theta(2))) + (theta(3));
+		}
+	}
 
-	//for (int i = min_row; i < max_row ; i++) {
-	//	double x = 0;
-	//	for (int j = endCol - transition ; j < max_col ; j++) {
-	//		im_reg_mat(i, j) = (theta(0)) * tanh(-1 * theta(1)* (x + theta(2))) + (theta(0));
-	//		x++;
-	//	}
-	//}
+	for (int i = min_row; i < max_row ; i++) {
+		x = 0;
+		for (int j = endCol - transition ; j < max_col ; j++) {
+			im_reg_mat(i, j) = (theta(0)) * tanh(-1 * theta(1)* (x + theta(2))) + (theta(3));
+			if (j <=endCol) x++;	// in order to copy the first value for the overlapping region 
+		}
+	}
 
 	Mat regIm, temp;
 	cv::eigen2cv(im_reg_mat, temp);

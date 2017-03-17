@@ -195,7 +195,16 @@ int main(int argc, char** argv)
 	grayImage.convertTo(grayImage, CV_32FC1, 1.0 / 255.0);
 
 	residual = grayImage - regularized;
-	imshow("Residual Map", residual);
+	///get the absolute value:
+	double min;
+	double max;
+	cv::minMaxIdx(residual, &min, &max);
+	cv::Mat adjMap;
+	// expand your range to 0..255. Similar to histEq();
+	residual.convertTo(adjMap, CV_8UC1, 255 / (max - min), -255 * min / (max - min));
+	cv::Mat falseColorsMap;
+	applyColorMap(adjMap, falseColorsMap, cv::COLORMAP_AUTUMN);
+	cv::imshow("Out", falseColorsMap);
 
 	imshow("Height Map", grayImage);
 	//////******************************* Masking section
