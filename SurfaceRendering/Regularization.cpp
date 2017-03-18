@@ -1,20 +1,20 @@
-#include "opencv2/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include <opencv2/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #include <vector>
 #include <iostream>
 #include <Eigen/Dense>
 #include <Eigen/SparseCore>
 #include <Eigen/SparseCholesky>
-#include <opencv2/core/eigen.hpp>
 #include <unsupported/Eigen/MatrixFunctions>
 #include "ImageProcessing.h"
+#include "input.h"
 #include <Eigen/Sparse>
 #include <stdio.h>      /* printf */
 #include <math.h>  
 #include <unsupported/Eigen/NonLinearOptimization>
 //#include <unsupported/Eigen/LevenbergMarquardt>
-
+#include <opencv2/core/eigen.hpp>
 
 // LM minimize for the model y = a x + b
 typedef std::vector<Eigen::Vector2d, Eigen::aligned_allocator<Eigen::Vector2d> > Point2DVector;
@@ -359,6 +359,11 @@ vector<Mat> regularization(vector < vector<Point> > fixedPoints, int padding ) {
 	return reg_morphed_patches;
 }
 vector<Mat> regularization(vector<Mat> morphed_patches, vector < vector<Point> > fixedPoints, int padding) {
+
+	MatrixXd pattern = input_pattern();
+	VectorXd columns = input_columns();
+	VectorXd rows = input_rows();
+
 
 	vector<Mat> reg_morphed_patches;
 

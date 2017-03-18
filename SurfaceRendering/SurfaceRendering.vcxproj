@@ -159,6 +159,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ImageProcessing.cpp" />
+    <ClCompile Include="input.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="ControlPoints.cpp" />
     <ClCompile Include="Morphing.cpp" />
@@ -167,6 +168,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ControlPoints.h" />
+    <ClInclude Include="input.h" />
     <ClInclude Include="Regularization.h" />
     <ClInclude Include="ImageProcessing.h" />
     <ClInclude Include="Morphing.h" />

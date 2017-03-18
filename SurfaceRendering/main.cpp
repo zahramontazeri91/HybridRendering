@@ -1,8 +1,7 @@
-#include "opencv2/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include <opencv2/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 //#include <opencv2/core/eigen.hpp>
-#include <iostream>
 #include <iostream>
 #include <Eigen/Dense>
 #include <vector>
@@ -10,6 +9,7 @@
 #include "Regularization.h"
 #include "ControlPoints.h"
 #include "Morphing.h"
+#include "input.h"
 #include <time.h>
 
 using Eigen::MatrixXd;
@@ -36,6 +36,9 @@ int main(int argc, char** argv)
 	vector < vector<Point> > movingPoints;
 	vector < vector<Point> > fixedPoints;
 	vector<Mat> gauss_masks;
+
+	/// reading the input information
+	get_aligned_masks();
 
 	grayImage = imread("height.exr", IMREAD_GRAYSCALE); // Read the height map
 	if (!grayImage.data) // Check for invalid input
