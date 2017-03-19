@@ -25,6 +25,8 @@ using namespace cv;
 
 int overlap = 1;
 int counter = 0;
+int width;
+int height;
 
 // Generic functor
 template<typename _Scalar, int NX = Eigen::Dynamic, int NY = Eigen::Dynamic>
@@ -74,9 +76,10 @@ struct MyFunctor : Functor<double>
 struct MyFunctorNumericalDiff : Eigen::NumericalDiff<MyFunctor> {};
 
 
-Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
+Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow, bool first_half_patch, bool last_half_patch) {
 
 
+	cout << "  asdfasjdfsdf " << first_half_patch << " " << last_half_patch << endl;
 	int min_col, max_col, min_row, max_row;
 	if (startCol == 1) {
 		min_col = startCol;
@@ -87,11 +90,11 @@ Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
 		if (startRow == 1) {
 			min_row = startRow;
 		}
-		if (endRow == 670) {
+		if (endRow == height-1) {
 			max_row = endRow;
 		}
 	}
-	else if (endCol == 456) {
+	else if (endCol == width-1) {
 		max_col = endCol;
 		min_row = startRow - overlap;
 		min_col = startCol - overlap;
@@ -100,7 +103,7 @@ Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
 		if (startRow == 1) {
 			min_row = startRow;
 		}
-		if (endRow == 670) {
+		if (endRow == height-1) {
 			max_row = endRow;
 		}
 	}
@@ -113,11 +116,11 @@ Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
 		if (startCol == 1) {
 			min_col = startCol;
 		}
-		if (endCol == 456) {
+		if (endCol == width-1) {
 			max_col = endCol;
 		}
 	}
-	else if (endRow == 670) {
+	else if (endRow == height-1) {
 		max_row = endRow;
 		min_row = startRow - overlap;
 		min_col = startCol - overlap;
@@ -126,7 +129,7 @@ Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
 		if (startCol == 1) {
 			min_col = startCol;
 		}
-		if (endCol == 456) {
+		if (endCol == width-1) {
 			max_col = endCol;
 		}
 	}
@@ -215,7 +218,7 @@ Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
 	return regIm;
 }
 
-Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow) {
+Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow, bool first_half_patch, bool last_half_patch) {
 
 	int min_col, max_col, min_row, max_row;
 	if (startCol == 1) {
@@ -360,49 +363,34 @@ vector<Mat> regularization(vector < vector<Point> > fixedPoints, int padding ) {
 }
 vector<Mat> regularization(vector<Mat> morphed_patches, vector < vector<Point> > fixedPoints, int padding) {
 
+	vector<Mat> reg_morphed_patches;
+	int patch_num = get_patch_number();
 	MatrixXd pattern = input_pattern();
+	MatrixXd first_half_patch = get_first_half_patch();
+	MatrixXd last_half_patch = get_last_half_patch();
 	VectorXd columns = input_columns();
 	VectorXd rows = input_rows();
+	int cs = pattern.cols();  //7
+	int rs = pattern.rows(); //6
+	width = columns[cs];
+	height = rows[rs];
 
 
-	vector<Mat> reg_morphed_patches;
-
-	for (int i = 0; i <= 3; i++) {
-
-		reg_morphed_patches.push_back(weftRegression(morphed_patches[i], fixedPoints[i][0].x - padding, fixedPoints[i][3].x - padding, fixedPoints[i][0].y - padding, fixedPoints[i][3].y - padding));
-
-		i++;
-
-		if (i > 3) break;
-		reg_morphed_patches.push_back(warpRegression(morphed_patches[i], fixedPoints[i][0].x - padding, fixedPoints[i][3].x - padding, fixedPoints[i][0].y - padding, fixedPoints[i][3].y - padding));
-		
-
-	}
-	//cout << "first loop" << endl;
-	for (int i = 4; i <= 16; i++) {
-
-		reg_morphed_patches.push_back(warpRegression(morphed_patches[i], fixedPoints[i][0].x - padding, fixedPoints[i][3].x - padding, fixedPoints[i][0].y - padding, fixedPoints[i][3].y - padding));
-		//cout << " p0 " << fixedPoints[i][0].x - padding << " " << fixedPoints[i][0].y - padding << endl <<
-		//	" p1 " << fixedPoints[i][1].x - padding << "  " << fixedPoints[i][1].y - padding << endl <<
-		//	" p2 " << fixedPoints[i][2].x - padding << "  " << fixedPoints[i][2].y - padding << endl <<
-		//	" p3 " << fixedPoints[i][3].x - padding << "  " << fixedPoints[i][3].y - padding << endl;
-
-		i++;
-
-		if (i > 16) break;
-		reg_morphed_patches.push_back(weftRegression(morphed_patches[i], fixedPoints[i][0].x - padding, fixedPoints[i][3].x - padding, fixedPoints[i][0].y - padding, fixedPoints[i][3].y - padding) );
-		
-	}
-	//cout << "second loop" << endl;
-	for (int i = 17 ; i <= 29; i++) {
-
-		reg_morphed_patches.push_back(warpRegression(morphed_patches[i], fixedPoints[i][0].x - padding, fixedPoints[i][3].x - padding, fixedPoints[i][0].y - padding, fixedPoints[i][3].y - padding));
-
-		i++;
-
-		if (i > 29) break;
-		reg_morphed_patches.push_back(weftRegression(morphed_patches[i], fixedPoints[i][0].x - padding, fixedPoints[i][3].x - padding, fixedPoints[i][0].y - padding, fixedPoints[i][3].y - padding));
-
+	int i = 0;
+	for (int c = 0; c < cs; c++) {
+		for (int r = 0; r < rs; r++) {
+			if ( pattern(r, c) && ( !first_half_patch(r,c) || rows[r+1]==height ) ) {
+				reg_morphed_patches.push_back(warpRegression(morphed_patches[i], fixedPoints[i][0].x - padding, fixedPoints[i][3].x - padding, 
+					fixedPoints[i][0].y - padding, fixedPoints[i][3].y - padding, first_half_patch(r,c), last_half_patch(r,c) ));
+				i++;
+			}
+			else if (!pattern(r, c) ) {
+				reg_morphed_patches.push_back(weftRegression(morphed_patches[i], fixedPoints[i][0].x - padding, fixedPoints[i][3].x - padding, 
+					fixedPoints[i][0].y - padding, fixedPoints[i][3].y - padding, first_half_patch(r, c), last_half_patch(r, c) ));
+				i++;
+			}
+		}
+	
 	}
 
 	return reg_morphed_patches;

@@ -16,9 +16,7 @@ Scalar value;
 RNG rng(12345);
 
 /// Global variables for CornerDetector
-
 int thresh = 200;
-int max_thresh = 255;
 
 Mat ZeroPadding(Mat src, int margin)
 {

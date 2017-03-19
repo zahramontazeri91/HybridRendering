@@ -36,44 +36,49 @@ int main(int argc, char** argv)
 	vector < vector<Point> > movingPoints;
 	vector < vector<Point> > fixedPoints;
 	vector<Mat> gauss_masks;
-
-	/// reading the input information
+	
+	/*
+	* Input Reading section
+	*/ 
+	std::cout << "***************************Reading input section **************" << endl;
 	get_aligned_masks();
+	int patch_num = get_patch_number();
 
-	grayImage = imread("height.exr", IMREAD_GRAYSCALE); // Read the height map
+	grayImage = imread("input/height.exr", IMREAD_GRAYSCALE); // Read the height map
 	if (!grayImage.data) // Check for invalid input
 	{
-		cout << "Could not open or find the image" << std::endl;
+		std::cout << "Could not open or find the image" << std::endl;
 		return -1;
 	}
 
-	///***************************segmentation section
-	//segmentation();
-	for (int i = 0; i < 30; i++) {
-		alignedMasks.push_back( imread("masks/aligned/patch_"+ to_string(i+1)+ ".png", CV_LOAD_IMAGE_GRAYSCALE) );
+
+	/*
+	* Segmentation section
+	*/
+	std::cout << "***************************segmentation section **************" << endl;
+	for (int i = 0; i < patch_num; i++) {
+		alignedMasks.push_back( imread("input/aligned mask/patch_"+ to_string(i+1)+ ".png", CV_LOAD_IMAGE_GRAYSCALE) );
 	}
 
-	for (int i = 0; i < 30; i++) {
-		masks.push_back(imread("masks/manually/patch_" + to_string(i + 1) + ".png", CV_LOAD_IMAGE_GRAYSCALE));
+	for (int i = 0; i < patch_num; i++) {
+		masks.push_back(imread("input/manually mask/patch_" + to_string(i + 1) + ".png", CV_LOAD_IMAGE_GRAYSCALE));
 	}
 	///mask the input to get all the patches 
-	for (int i = 0; i < 30; i++) {
+	for (int i = 0; i < patch_num; i++) {
 		Mat temp;
 		grayImage.copyTo(temp, masks[i]);
 		patches.push_back(temp);
 		morphed_patches.push_back(Mat::zeros(grayImage.rows, grayImage.cols, CV_32FC1));
 		unmorphed_reg_patches.push_back(Mat::zeros(grayImage.rows, grayImage.cols, CV_32FC1));
-		//imwrite("Patches/patch_" + std::to_string(i) + ".png", temp);
+		imwrite("Patches/patch_" + std::to_string(i) + ".png", temp);
 	}
-	//imshow("image", patches[12]);
-
 
 
 	/*
 	* Control Point section
 	*/
-	//cout << "************************ Control Point section ********************* " << endl;
-	for (int i = 0; i < 30; i++) {
+	cout << "************************ Control Point section ********************* " << endl;
+	for (int i = 0; i < patch_num; i++) {
 		masks_pad.push_back( ZeroPadding(masks[i], padding));
 		alignedMasks_pad.push_back(ZeroPadding(alignedMasks[i], padding));
 		patches_pad.push_back(ZeroPadding(patches[i], padding));
@@ -90,7 +95,7 @@ int main(int argc, char** argv)
 	* morphing section using the control points for each patch
 	*/
 	//cout << "************************ morphing section ********************* " << endl;
-	//for (int i = 0; i < 30; i++) {
+	//for (int i = 0; i < patch_num; i++) {
 	//	Mat temp;
 	//	Mat grayImage_pad = ZeroPadding(grayImage, padding);
 	//	morphing(temp, grayImage_pad, movingPoints[i], fixedPoints[i]);
@@ -105,46 +110,21 @@ int main(int argc, char** argv)
 	//}
 
 
-
 	/*
-	* ************************Regression section for each patch
+	* regularization section for each patch
 	*/
-	cout << "************************Regression section ************** " << endl;
+	std::cout << "************************Regularization section ************** " << endl;
 	vector<Mat> reg_morphed_patches;
-
-#if 1
 	reg_morphed_patches = regularization(fixedPoints, padding);
-#else
-	///Read regularized patches so comment the regularization()
-	for (int i = 0; i <= 5; i++) {
-		reg_morphed_patches.push_back(imread("Regressioned Patches/reg_patch_" + to_string(i) + ".png", CV_LOAD_IMAGE_GRAYSCALE));
-	}
 
-	for (int i = 6; i <= 12; i++) {
-		reg_morphed_patches.push_back(imread("Regressioned Patches/reg_patch_" + to_string(i) + ".png", CV_LOAD_IMAGE_GRAYSCALE));
-	}
-#endif
-
-	///add the regularized patches:
-	//Mat reg_wefts = (imread("Regressioned Patches/reg_patch_0.png", CV_LOAD_IMAGE_GRAYSCALE));
-	//for (int i = 1; i <= 5; i++) {
-	//	reg_wefts += (imread("Regressioned Patches/reg_patch_" + to_string(i) + ".png", CV_LOAD_IMAGE_GRAYSCALE));
-	//}
-	//imshow("wefts", reg_wefts);
-
-	//Mat reg_warps = (imread("Regressioned Patches/reg_patch_6.png", CV_LOAD_IMAGE_GRAYSCALE));
-	//for (int i = 7; i <= 12; i++) {
-	//	reg_warps += (imread("Regressioned Patches/reg_patch_" + to_string(i) + ".png", CV_LOAD_IMAGE_GRAYSCALE));
-	//}
-	//imshow("warps", reg_warps);
 
 	/*
 	* Undo_Morphing section for each patch
 	*/
-	cout << "************************Undo_Morphing section *************" << endl;
+	std::cout << "************************Undo_Morphing section *************" << endl;
 	cv::Rect myROI(padding, padding, grayImage.cols, grayImage.rows);
 
-	for (int i = 0; i < 30; i++) {
+	for (int i = 0; i < patch_num; i++) {
 		Mat morphed_yarn;
 		Mat reg_patch_pad = ZeroPadding(reg_morphed_patches[i], padding);
 		morphing(morphed_yarn, reg_patch_pad, fixedPoints[i], movingPoints[i]);
@@ -158,6 +138,7 @@ int main(int argc, char** argv)
 		///make the type of Mats same and ready for element-wise maltiplication:
 		gauss_masks[i].convertTo(gauss_masks[i], CV_32FC1, 1.0 / 255.0);
 		cropped_morphed_yarn.convertTo(cropped_morphed_yarn, CV_32FC1, 1.0 / 255.0);
+
 		//string ty = type2str(unmorphed_reg_patches[i].type());
 		//printf("Matrix: %s %dx%d \n", ty.c_str(), unmorphed_reg_patches[i].cols, unmorphed_reg_patches[i].rows);
 		//string ty2 = type2str(cropped_morphed_yarn.type());
@@ -166,7 +147,7 @@ int main(int argc, char** argv)
 		//printf("Matrix: %s %dx%d \n", ty3.c_str(), gauss_masks[i].cols, gauss_masks[i].rows);
 
 		unmorphed_reg_patches[i] = cropped_morphed_yarn.mul(gauss_masks[i]);
-//		imwrite("Unmorphed Reg Yarns/unmorphed_reg_patch_" + std::to_string(i) + ".png", unmorphed_reg_patches[i]);
+		imwrite("Unmorphed Reg/unmorphed_reg_patch_" + std::to_string(i) + ".png", unmorphed_reg_patches[i]);
 
 	}
 
@@ -174,19 +155,26 @@ int main(int argc, char** argv)
 	/*
 	* Putting the patches together and blending
 	*/
-	cout << "************************Blending section *************" << endl;
+	std::cout << "************************Blending section *************" << endl;
+	/// TO DO: why it doesn't work if I read from file instead
+	//for (int i = 0; i < patch_num; i++) { 
+	//	unmorphed_reg_patches[i] = cv::imread("Unmorphed Reg/unmorphed_reg_patch_" + std::to_string(i) + ".png", CV_LOAD_IMAGE_GRAYSCALE);
+	//}
 	Mat regularized = unmorphed_reg_patches[0];
-	for (int i = 1; i < 30; i++) {
+	for (int i = 1; i < patch_num; i++) {
 		regularized += unmorphed_reg_patches[i];
 	}
-	imshow("Regularized Map", regularized);
+	cv::imshow("Regularized Map", regularized);
 	//imwrite("Output/regularized.jpg", regularized);
 
 	/*
 	* Obtaining Residual map
 	*/
-	cout << "************************Residual map section *************" << endl;
+	std::cout << "************************Residual map section *************" << endl;
 	Mat residual = Mat::zeros(grayImage.rows, grayImage.cols, CV_32FC1);
+
+	grayImage.convertTo(grayImage, CV_32FC1, 1.0 / 255.0);
+	regularized.convertTo(regularized, CV_32FC1, 1.0 / 255.0);
 
 	///make the type of Mats same and ready for element-wise subtraction:
 	//string ty3 = type2str(regularized.type());
@@ -195,9 +183,10 @@ int main(int argc, char** argv)
 	//printf("Matrix: %s %dx%d \n", ty4.c_str(), residual.cols, residual.rows);
 	//string ty5 = type2str(grayImage.type());
 	//printf("Matrix: %s %dx%d \n", ty5.c_str(), grayImage.cols, grayImage.rows);
-	grayImage.convertTo(grayImage, CV_32FC1, 1.0 / 255.0);
 
-	residual = grayImage - regularized;
+	subtract(grayImage, regularized, residual);
+	//residual = grayImage - regularized;
+
 	///get the absolute value:
 	double min;
 	double max;
@@ -206,10 +195,10 @@ int main(int argc, char** argv)
 	// expand your range to 0..255. Similar to histEq();
 	residual.convertTo(adjMap, CV_8UC1, 255 / (max - min), -255 * min / (max - min));
 	cv::Mat falseColorsMap;
-	applyColorMap(adjMap, falseColorsMap, cv::COLORMAP_AUTUMN);
-	cv::imshow("Out", falseColorsMap);
+	cv::applyColorMap(adjMap, falseColorsMap, cv::COLORMAP_AUTUMN);
+	cv::imshow("Residual Map", residual);
 
-	imshow("Height Map", grayImage);
+	cv::imshow("Height Map", grayImage);
 	//////******************************* Masking section
 	///// now let's separate out the patches from regularized yarns
 	//Mat temp;
@@ -291,8 +280,9 @@ int main(int argc, char** argv)
 	//	7.2, 0, 1, 0, 9.4,
 	//	6.1, 6.8, 7.7, 8.7, 6.1;
 	//MatrixXd Lx(4,5), Ly(4,5);
+
 	final = clock() - init;
-	cout << "the program is finished in "<< (double)final / ((double)CLOCKS_PER_SEC);
+	std::cout << "the program is finished in "<< (double)final / ((double)CLOCKS_PER_SEC);
 
 	waitKey(0); // Wait for a keystroke in the window
 	return 0;
