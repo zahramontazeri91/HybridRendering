@@ -8,7 +8,7 @@
 using namespace cv;
 using namespace std;
 
-vector<Mat> regularization(vector<Mat> morphed_patches, vector < vector<Point> > fixedPoints, int padding );
-vector<Mat> regularization(vector < vector<Point> > fixedPoints, int padding);
+vector<Mat> regularization(vector<Mat> morphed_patches, int padding );
+vector<Mat> regularization(int padding);
 
 #endif

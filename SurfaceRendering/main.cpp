@@ -61,7 +61,7 @@ int main(int argc, char** argv)
 	}
 
 	for (int i = 0; i < patch_num; i++) {
-		masks.push_back(imread("input/manually mask/patch_" + to_string(i + 1) + ".png", CV_LOAD_IMAGE_GRAYSCALE));
+		masks.push_back(imread("input/aligned mask/patch_" + to_string(i + 1) + ".png", CV_LOAD_IMAGE_GRAYSCALE)); // CHANGED 
 	}
 	///mask the input to get all the patches 
 	for (int i = 0; i < patch_num; i++) {
@@ -115,7 +115,7 @@ int main(int argc, char** argv)
 	*/
 	std::cout << "************************Regularization section ************** " << endl;
 	vector<Mat> reg_morphed_patches;
-	reg_morphed_patches = regularization(fixedPoints, padding);
+	reg_morphed_patches = regularization(padding);
 
 
 	/*

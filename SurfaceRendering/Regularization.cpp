@@ -23,7 +23,7 @@ using namespace Eigen;
 using namespace std;
 using namespace cv;
 
-int overlap = 1;
+int overlap = 0;
 int counter = 0;
 int width;
 int height;
@@ -78,198 +78,562 @@ struct MyFunctorNumericalDiff : Eigen::NumericalDiff<MyFunctor> {};
 
 Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow, bool first_half_patch, bool last_half_patch) {
 
+	/// @@@@@@@@@@@@@@@@@@@@@@@@@@@@@ first half patch
+	if (first_half_patch && !last_half_patch) {
+		int min_col, max_col, min_row, max_row;
+		if (startCol == 0) {
+			min_col = startCol;
+			min_row = startRow - overlap;
+			max_col = endCol + overlap;
+			max_row = endRow;
 
-	cout << "  asdfasjdfsdf " << first_half_patch << " " << last_half_patch << endl;
-	int min_col, max_col, min_row, max_row;
-	if (startCol == 1) {
-		min_col = startCol;
-		min_row = startRow - overlap;
-		max_col = endCol + overlap;
-		max_row = endRow + overlap;
-
-		if (startRow == 1) {
-			min_row = startRow;
+			if (startRow == 0) {
+				min_row = startRow;
+			}
+			if (endRow == height - 1) {
+				max_row = height;
+			}
 		}
-		if (endRow == height-1) {
+		else if (endCol == width - 1) {
+			max_col = width;
+			min_row = startRow - overlap;
+			min_col = startCol - overlap;
+			max_row = endRow;
+
+			if (startRow == 0) {
+				min_row = startRow;
+			}
+			if (endRow == height - 1) {
+				max_row = height;
+			}
+		}
+		else if (startRow == 0) {
+			min_row = startRow;
+			min_col = startCol - overlap;
+			max_col = endCol + overlap;
+			max_row = endRow;
+
+			if (startCol == 0) {
+				min_col = startCol;
+			}
+			if (endCol == width - 1) {
+				max_col = width;
+			}
+		}
+		else if (endRow == height - 1) {
+			max_row = height;
+			min_row = startRow - overlap;
+			min_col = startCol - overlap;
+			max_col = endCol + overlap;
+
+			if (startCol == 0) {
+				min_col = startCol;
+			}
+			if (endCol == width - 1) {
+				max_col = width;
+			}
+		}
+		else {
+			min_col = startCol - overlap;
+			min_row = startRow - overlap;
+			max_col = endCol + overlap;
 			max_row = endRow;
 		}
-	}
-	else if (endCol == width-1) {
-		max_col = endCol;
-		min_row = startRow - overlap;
-		min_col = startCol - overlap;
-		max_row = endRow + overlap;
 
-		if (startRow == 1) {
+		MatrixXd im_mat;
+		cv2eigen(im, im_mat);
+
+		Point2DVector points;
+		int indx, col = 0;
+
+		int transition = int((20.0 / 100.0) * (endRow - startRow));
+
+		for (int i = startCol; i <= endCol; i++) {
+			indx = 0;
+			for (int j = startRow; j <= startRow + transition; j++) {
+				//indx = j + col*(endRow - startRow) + 1;
+				Eigen::Vector2d point;
+				point(0) = indx;
+				point(1) = im_mat(j, i);
+				points.push_back(point);
+				indx++;
+			}
+			col++;
+		}
+
+		//initialize the theta vector
+		Eigen::VectorXd theta(4);
+		double d = startRow + transition - min_row;
+		//(theta(0)/2.0) * tanh(4.0/d* (x-d/2) ) + (theta(0)/2.0)
+		theta << 170.0 / 2.0, 4.0 / d, -1.0 * (d / 2.0), 170.0 / 2.0;
+		//x.fill(4.0f);
+
+		MyFunctorNumericalDiff functor;
+		functor.Points = points;
+		Eigen::LevenbergMarquardt<MyFunctorNumericalDiff> lm(functor);
+
+		Eigen::LevenbergMarquardtSpace::Status status = lm.minimize(theta);
+		//std::cout << "status: " << status << std::endl;
+
+		MatrixXd im_reg_mat = MatrixXd::Zero(im_mat.rows(), im_mat.cols());
+
+		//cout << "min_row " << min_row << "startRow " << startRow << "startRow + transition " << startRow + transition << "endRow - transition " << endRow - transition << "endRow " << endRow << "max_row " << max_row << endl;
+
+		double x;
+		for (int i = min_col; i < max_col; i++) {
+			x = 0;
+			for (int j = min_row; j < startRow + transition; j++) {
+				im_reg_mat(j, i) = (theta(0)) * tanh(theta(1)* (x + theta(2))) + (theta(3));
+				if (j >= startRow) x++;   // in order to copy the first value for the overlapping region 
+			}
+		}
+
+		// in order to copy the last value for the constant region in the middle 
+		for (int i = min_col; i < max_col; i++) {
+			for (int j = startRow + transition; j < max_row; j++) {
+				im_reg_mat(j, i) = (theta(0)) * tanh(theta(1)* (x + theta(2))) + (theta(3));
+			}
+		}
+
+		//for (int i = min_col; i < max_col; i++) {
+		//	x = 0;
+		//	for (int j = endRow - transition; j < max_row; j++) {
+		//		im_reg_mat(j, i) = (theta(0)) * tanh(-1 * theta(1)* (x + theta(2))) + (theta(3));
+		//		if (j <= endRow) x++;
+		//	}
+		//}
+
+		Mat regIm, temp;
+		cv::eigen2cv(im_reg_mat, temp);
+		temp.convertTo(regIm, CV_8UC1);
+		//imshow("regularized", regIm);
+		//cv::imwrite("Regressioned Patches/reg_patch_" + std::to_string(counter) + ".png", regIm);
+		std::cout << "theta for warp grid_" + std::to_string(counter) << ":  " << endl << theta << std::endl;
+		counter++;
+
+		return regIm;
+	}
+
+	/// @@@@@@@@@@@@@@@@@@@@@@@@@@@@@ last half patch
+	if (!first_half_patch && last_half_patch) {
+		int min_col, max_col, min_row, max_row;
+		if (startCol == 0) {
+			min_col = startCol;
+			min_row = startRow ;
+			max_col = endCol + overlap;
+			max_row = endRow + overlap;
+
+			if (startRow == 0) {
+				min_row = startRow;
+			}
+			if (endRow == height - 1) {
+				max_row = height;
+			}
+		}
+		else if (endCol == width - 1) {
+			max_col = width;
 			min_row = startRow;
-		}
-		if (endRow == height-1) {
-			max_row = endRow;
-		}
-	}
-	else if (startRow == 1) {
-		min_row = startRow;
-		min_col = startCol - overlap;
-		max_col = endCol + overlap;
-		max_row = endRow + overlap;
+			min_col = startCol - overlap;
+			max_row = endRow + overlap;
 
-		if (startCol == 1) {
+			if (startRow == 0) {
+				min_row = startRow;
+			}
+			if (endRow == height - 1) {
+				max_row = height;
+			}
+		}
+		else if (startRow == 0) {
+			min_row = startRow;
+			min_col = startCol - overlap;
+			max_col = endCol + overlap;
+			max_row = endRow + overlap;
+
+			if (startCol == 0) {
+				min_col = startCol;
+			}
+			if (endCol == width - 1) {
+				max_col = width;
+			}
+		}
+		else if (endRow == height - 1) {
+			max_row = height;
+			min_row = startRow;
+			min_col = startCol - overlap;
+			max_col = endCol + overlap;
+
+			if (startCol == 0) {
+				min_col = startCol;
+			}
+			if (endCol == width - 1) {
+				max_col = width;
+			}
+		}
+		else {
+			min_col = startCol - overlap;
+			min_row = startRow;
+			max_col = endCol + overlap;
+			max_row = endRow + overlap;
+		}
+
+		//cout << min_col << "  " << min_row << "  " << max_col << "  " << max_row << endl;
+
+		MatrixXd im_mat;
+		cv2eigen(im, im_mat);
+
+		Point2DVector points;
+		int indx, col = 0;
+
+		int transition = int((20.0 / 100.0) * (endRow - startRow));
+
+		for (int i = startCol; i <= endCol; i++) {
+			indx = 0;
+			for (int j = startRow; j <= startRow + transition; j++) {
+				//indx = j + col*(endRow - startRow) + 1;
+				Eigen::Vector2d point;
+				point(0) = indx;
+				point(1) = im_mat(j, i);
+				points.push_back(point);
+				indx++;
+			}
+			col++;
+		}
+
+
+		//initialize the theta vector
+		Eigen::VectorXd theta(4);
+		double d = max_row - (endRow - transition);
+		//(theta(0)/2.0) * tanh(4.0/d* (x-d/2) ) + (theta(0)/2.0)
+		theta << 170.0 / 2.0, 4.0 / d, -1.0 * (d / 2.0), 170.0 / 2.0;
+		//x.fill(4.0f);
+
+		MyFunctorNumericalDiff functor;
+		functor.Points = points;
+		Eigen::LevenbergMarquardt<MyFunctorNumericalDiff> lm(functor);
+
+		Eigen::LevenbergMarquardtSpace::Status status = lm.minimize(theta);
+		//std::cout << "status: " << status << std::endl;
+
+		MatrixXd im_reg_mat = MatrixXd::Zero(im_mat.rows(), im_mat.cols());
+
+		//cout << "min_row " << min_row << "startRow " << startRow << "startRow + transition " << startRow + transition << "endRow - transition " << endRow - transition << "endRow " << endRow << "max_row " << max_row << endl;
+
+		double x;
+		//for (int i = min_col; i < max_col; i++) {
+		//	x = 0;
+		//	for (int j = min_row; j < startRow + transition; j++) {
+		//		im_reg_mat(j, i) = (theta(0)) * tanh(theta(1)* (x + theta(2))) + (theta(3));
+		//		if (j >= startRow) x++;   // in order to copy the first value for the overlapping region 
+		//	}
+		//}
+
+		// in order to copy the last value for the constant region in the middle 
+		for (int i = min_col; i < max_col; i++) {
+			for (int j = min_row; j < endRow - transition; j++) {
+				//im_reg_mat(j, i) = (theta(0)) * tanh(theta(1)* (x + theta(2))) + (theta(3));
+				im_reg_mat(j, i) = 170;
+			}
+		}
+
+		for (int i = min_col; i < max_col; i++) {
+			x = 0;
+			for (int j = endRow - transition; j < max_row; j++) {
+				im_reg_mat(j, i) = (theta(0)) * tanh(-1 * theta(1)* (x + theta(2))) + (theta(3));
+				if (j <= endRow) x++;
+			}
+		}
+
+		Mat regIm, temp;
+		cv::eigen2cv(im_reg_mat, temp);
+		temp.convertTo(regIm, CV_8UC1);
+		//imshow("regularized", regIm);
+		//cv::imwrite("Regressioned Patches/reg_patch_" + std::to_string(counter) + ".png", regIm);
+		std::cout << "theta for warp grid_" + std::to_string(counter) << ":  " << endl << theta << std::endl;
+		counter++;
+
+		return regIm;
+	}
+
+	/// @@@@@@@@@@@@@@@@@@@@@@@@@@@@@ neigher patch
+	if (!first_half_patch && !last_half_patch) {
+		int min_col, max_col, min_row, max_row;
+		if (startCol == 0) {
 			min_col = startCol;
-		}
-		if (endCol == width-1) {
-			max_col = endCol;
-		}
-	}
-	else if (endRow == height-1) {
-		max_row = endRow;
-		min_row = startRow - overlap;
-		min_col = startCol - overlap;
-		max_col = endCol + overlap;
+			min_row = startRow ;
+			max_col = endCol + overlap;
+			max_row = endRow ;
 
-		if (startCol == 1) {
+			if (startRow == 0) {
+				min_row = startRow;
+			}
+			if (endRow == height - 1) {
+				max_row = height;
+			}
+		}
+		else if (endCol == width - 1) {
+			max_col = width;
+			min_row = startRow ;
+			min_col = startCol - overlap;
+			max_row = endRow ;
+
+			if (startRow == 0) {
+				min_row = startRow;
+			}
+			if (endRow == height - 1) {
+				max_row = height;
+			}
+		}
+		else if (startRow == 0) {
+			min_row = startRow;
+			min_col = startCol - overlap;
+			max_col = endCol + overlap;
+			max_row = endRow ;
+
+			if (startCol == 0) {
+				min_col = startCol;
+			}
+			if (endCol == width - 1) {
+				max_col = width;
+			}
+		}
+		else if (endRow == height - 1) {
+			max_row = height;
+			min_row = startRow ;
+			min_col = startCol - overlap;
+			max_col = endCol + overlap;
+
+			if (startCol == 0) {
+				min_col = startCol;
+			}
+			if (endCol == width - 1) {
+				max_col = width;
+			}
+		}
+		else {
+			min_col = startCol - overlap;
+			min_row = startRow ;
+			max_col = endCol + overlap;
+			max_row = endRow ;
+		}
+
+
+		MatrixXd im_mat;
+		cv2eigen(im, im_mat);
+		MatrixXd im_reg_mat = MatrixXd::Zero(im_mat.rows(), im_mat.cols());
+
+
+		// in order to copy the last value for the constant region in the middle 
+		for (int i = min_col; i < max_col; i++) {
+			for (int j = min_row; j < max_row; j++) {
+				im_reg_mat(j, i) = 170;
+			}
+		}
+
+
+		Mat regIm, temp;
+		cv::eigen2cv(im_reg_mat, temp);
+		temp.convertTo(regIm, CV_8UC1);
+		//imshow("regularized", regIm);
+		cv::imwrite("Regressioned Patches/reg_patch_" + std::to_string(counter) + ".png", regIm);
+		std::cout << "theta for warp patch_" + std::to_string(counter) << ":  " << endl << 170 << std::endl;
+		counter++;
+
+		return regIm;
+	}
+
+	/// @@@@@@@@@@@@@@@@@@@@@@@@@@@@@ both patch
+	if (first_half_patch && last_half_patch) {
+		int min_col, max_col, min_row, max_row;
+		if (startCol == 0) {
 			min_col = startCol;
+			min_row = startRow - overlap;
+			max_col = endCol + overlap;
+			max_row = endRow + overlap;
+
+			if (startRow == 0) {
+				min_row = startRow;
+			}
+			if (endRow == height - 1) {
+				max_row = height;
+			}
 		}
-		if (endCol == width-1) {
-			max_col = endCol;
+		else if (endCol == width - 1) {
+			max_col = width;
+			min_row = startRow - overlap;
+			min_col = startCol - overlap;
+			max_row = endRow + overlap;
+
+			if (startRow == 0) {
+				min_row = startRow;
+			}
+			if (endRow == height - 1) {
+				max_row = height;
+			}
 		}
-	}
-	else {
-		min_col = startCol - overlap;
-		min_row = startRow - overlap;
-		max_col = endCol + overlap;
-		max_row = endRow + overlap;
-	}
+		else if (startRow == 0) {
+			min_row = startRow;
+			min_col = startCol - overlap;
+			max_col = endCol + overlap;
+			max_row = endRow + overlap;
 
-
-	MatrixXd im_mat;
-	cv2eigen(im, im_mat);
-
-	Point2DVector points;
-	int indx, col =0;
-
-	int transition=  int( (30.0 / 100.0) * (endRow - startRow) );
- 
-	for (int i = startCol; i <= endCol; i++) {
-		indx = 0;
-		for (int j = startRow; j <= startRow + transition; j++) {
-			//indx = j + col*(endRow - startRow) + 1;
-			Eigen::Vector2d point;
-			point(0) = indx;
-			point(1) = im_mat(j,i);
-			points.push_back(point);
-			indx++;
+			if (startCol == 0) {
+				min_col = startCol;
+			}
+			if (endCol == width - 1) {
+				max_col = width;
+			}
 		}
-		col++;
-	}
+		else if (endRow == height - 1) {
+			max_row = height;
+			min_row = startRow - overlap;
+			min_col = startCol - overlap;
+			max_col = endCol + overlap;
 
-	//unsigned int numberOfPoints = 200;
-	//Point2DVector points = GeneratePoints(numberOfPoints);
-
-	//initialize the theta vector
-	Eigen::VectorXd theta(4);
-	double d = startRow + transition - min_row;
-	//(theta(0)/2.0) * tanh(4.0/d* (x-d/2) ) + (theta(0)/2.0)
-	theta << 170.0 / 2.0, 4.0/d, -1.0 * (d/2.0), 170.0 / 2.0;
-	//x.fill(4.0f);
-
-	MyFunctorNumericalDiff functor;
-	functor.Points = points;
-	Eigen::LevenbergMarquardt<MyFunctorNumericalDiff> lm(functor);
-
-	Eigen::LevenbergMarquardtSpace::Status status = lm.minimize(theta);
-	//std::cout << "status: " << status << std::endl;
-
-	MatrixXd im_reg_mat = MatrixXd::Zero(im_mat.rows(), im_mat.cols());
-
-	//cout << "min_row " << min_row << "startRow " << startRow << "startRow + transition " << startRow + transition << "endRow - transition " << endRow - transition << "endRow " << endRow << "max_row " << max_row << endl;
-
-	double x;
-	for (int i = min_col; i < max_col; i++) {
-		x = 0;
-		for (int j = min_row; j < startRow + transition; j++) {
-			im_reg_mat(j, i) = (theta(0)) * tanh(theta(1)* (x + theta(2)) ) + (theta(3));
-			if (j >= startRow) x++;   // in order to copy the first value for the overlapping region 
+			if (startCol == 0) {
+				min_col = startCol;
+			}
+			if (endCol == width - 1) {
+				max_col = width;
+			}
 		}
-	}
-
-	// in order to copy the last value for the constant region in the middle 
-	for (int i = min_col; i < max_col; i++) {
-		for (int j = startRow + transition; j < endRow - transition; j++) {
-			im_reg_mat(j, i) = (theta(0)) * tanh(theta(1)* (x + theta(2))) + (theta(3));
+		else {
+			min_col = startCol - overlap;
+			min_row = startRow - overlap;
+			max_col = endCol + overlap;
+			max_row = endRow + overlap;
 		}
-	}
 
-	for (int i = min_col; i < max_col; i++) {
-		x = 0;
-		for (int j = endRow - transition; j < max_row ; j++) {
-			im_reg_mat(j, i) = (theta(0)) * tanh(-1 * theta(1)* (x + theta(2))) + (theta(3));
-			if (j <= endRow) x++;
+
+		MatrixXd im_mat;
+		cv2eigen(im, im_mat);
+
+		Point2DVector points;
+		int indx, col = 0;
+
+		int transition = int((20.0 / 100.0) * (endRow - startRow));
+
+		for (int i = startCol; i <= endCol; i++) {
+			indx = 0;
+			for (int j = startRow; j <= startRow + transition; j++) {
+				//indx = j + col*(endRow - startRow) + 1;
+				Eigen::Vector2d point;
+				point(0) = indx;
+				point(1) = im_mat(j, i);
+				points.push_back(point);
+				indx++;
+			}
+			col++;
 		}
+
+		//unsigned int numberOfPoints = 200;
+		//Point2DVector points = GeneratePoints(numberOfPoints);
+
+		//initialize the theta vector
+		Eigen::VectorXd theta(4);
+		double d = startRow + transition - min_row;
+		//(theta(0)/2.0) * tanh(4.0/d* (x-d/2) ) + (theta(0)/2.0)
+		theta << 170.0 / 2.0, 4.0 / d, -1.0 * (d / 2.0), 170.0 / 2.0;
+		//x.fill(4.0f);
+
+		MyFunctorNumericalDiff functor;
+		functor.Points = points;
+		Eigen::LevenbergMarquardt<MyFunctorNumericalDiff> lm(functor);
+
+		Eigen::LevenbergMarquardtSpace::Status status = lm.minimize(theta);
+		//std::cout << "status: " << status << std::endl;
+
+		MatrixXd im_reg_mat = MatrixXd::Zero(im_mat.rows(), im_mat.cols());
+
+		//cout << "min_row " << min_row << "startRow " << startRow << "startRow + transition " << startRow + transition << "endRow - transition " << endRow - transition << "endRow " << endRow << "max_row " << max_row << endl;
+
+		double x;
+		for (int i = min_col; i < max_col; i++) {
+			x = 0;
+			for (int j = min_row; j < startRow + transition; j++) {
+				im_reg_mat(j, i) = (theta(0)) * tanh(theta(1)* (x + theta(2))) + (theta(3));
+				if (j >= startRow) x++;   // in order to copy the first value for the overlapping region 
+			}
+		}
+
+		// in order to copy the last value for the constant region in the middle 
+		for (int i = min_col; i < max_col; i++) {
+			for (int j = startRow + transition; j < endRow - transition; j++) {
+				im_reg_mat(j, i) = (theta(0)) * tanh(theta(1)* (x + theta(2))) + (theta(3));
+			}
+		}
+
+		for (int i = min_col; i < max_col; i++) {
+			x = 0;
+			for (int j = endRow - transition; j < max_row; j++) {
+				im_reg_mat(j, i) = (theta(0)) * tanh(-1 * theta(1)* (x + theta(2))) + (theta(3));
+				if (j <= endRow) x++;
+			}
+		}
+
+		Mat regIm, temp;
+		cv::eigen2cv(im_reg_mat, temp);
+		temp.convertTo(regIm, CV_8UC1);
+		//imshow("regularized", regIm);
+		cv::imwrite("Regressioned Patches/reg_patch_" + std::to_string(counter) + ".png", regIm);
+		std::cout << "theta for warp patch_" + std::to_string(counter) << ":  " << endl << theta << std::endl;
+		counter++;
+
+		return regIm;
 	}
-
-	Mat regIm, temp;
-	cv::eigen2cv(im_reg_mat, temp);
-	temp.convertTo(regIm, CV_8UC1);
-	//imshow("regularized", regIm);
-	cv::imwrite("Regressioned Patches/reg_patch_" + std::to_string(counter) + ".png", regIm);
-	std::cout << "theta for warp patch_" + std::to_string(counter) << ":  " << endl<< theta << std::endl;
-	counter++;
-
-	return regIm;
 }
 
 Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow, bool first_half_patch, bool last_half_patch) {
 
 	int min_col, max_col, min_row, max_row;
-	if (startCol == 1) {
+	if (startCol == 0) {
 		min_col = startCol;
 		min_row = startRow - overlap;
 		max_col = endCol + overlap;
 		max_row = endRow + overlap;
 
-		if (startRow == 1) {
+		if (startRow == 0) {
 			min_row = startRow;
 		}
-		if (endRow == 670) {
+		if (endRow == height) {
 			max_row = endRow;
 		}
 	}
-	else if (endCol == 456) {
+	else if (endCol == width) {
 		max_col = endCol;
 		min_row = startRow - overlap;
 		min_col = startCol - overlap;
 		max_row = endRow + overlap;
 
-		if (startRow == 1) {
+		if (startRow == 0) {
 			min_row = startRow;
 		}
-		if (endRow == 670) {
+		if (endRow == height) {
 			max_row = endRow;
 		}
 	}
-	else if (startRow == 1) {
+	else if (startRow == 0) {
 		min_row = startRow;
 		min_col = startCol - overlap;
 		max_col = endCol + overlap;
 		max_row = endRow + overlap;
 
-		if (startCol == 1) {
+		if (startCol == 0) {
 			min_col = startCol;
 		}
-		if (endCol == 456) {
+		if (endCol == width) {
 			max_col = endCol;
 		}
 	}
-	else if (endRow == 670) {
+	else if (endRow == height) {
 		max_row = endRow;
 		min_row = startRow - overlap;
 		min_col = startCol - overlap;
 		max_col = endCol + overlap;
 
-		if (startCol == 1) {
+		if (startCol == 0) {
 			min_col = startCol;
 		}
-		if (endCol == 456) {
+		if (endCol == width) {
 			max_col = endCol;
 		}
 	}
@@ -352,16 +716,16 @@ Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow, b
 	return regIm;
 }
 
-vector<Mat> regularization(vector<Mat> morphed_patches, vector < vector<Point> > fixedPoints, int padding);
-vector<Mat> regularization(vector < vector<Point> > fixedPoints, int padding ) {
+vector<Mat> regularization(vector<Mat> morphed_patches, int padding);
+vector<Mat> regularization(int padding ) {
 	vector<Mat> morphed_patches;
 	for (int i = 0; i < 30; i++) {
 		morphed_patches.push_back(imread("Morphed Patches/morphed_patch_" + std::to_string(i) + ".png", CV_LOAD_IMAGE_GRAYSCALE));
 	}
-	vector<Mat> reg_morphed_patches = regularization(morphed_patches, fixedPoints, padding);
+	vector<Mat> reg_morphed_patches = regularization(morphed_patches, padding);
 	return reg_morphed_patches;
 }
-vector<Mat> regularization(vector<Mat> morphed_patches, vector < vector<Point> > fixedPoints, int padding) {
+vector<Mat> regularization(vector<Mat> morphed_patches, int padding) {
 
 	vector<Mat> reg_morphed_patches;
 	int patch_num = get_patch_number();
@@ -376,21 +740,33 @@ vector<Mat> regularization(vector<Mat> morphed_patches, vector < vector<Point> >
 	height = rows[rs];
 
 
+	//int startCol, int endCol, int startRow, int endRow,
 	int i = 0;
+	Mat temp = Mat(height, width, CV_8U, cvScalar(0.));
 	for (int c = 0; c < cs; c++) {
 		for (int r = 0; r < rs; r++) {
-			if ( pattern(r, c) && ( !first_half_patch(r,c) || rows[r+1]==height ) ) {
-				reg_morphed_patches.push_back(warpRegression(morphed_patches[i], fixedPoints[i][0].x - padding, fixedPoints[i][3].x - padding, 
-					fixedPoints[i][0].y - padding, fixedPoints[i][3].y - padding, first_half_patch(r,c), last_half_patch(r,c) ));
-				i++;
+			if (pattern(r, c)) {
+
+				//reg_morphed_patches.push_back(morphed_patches[i]);
+				//cout << "warp " << columns[c] << "  " << columns[c + 1] << "  " << rows[r] << "  " << rows[r + 1] << " " << first_half_patch(r, c) << "  " << last_half_patch(r, c)<< endl;
+				Mat temp2 = warpRegression(morphed_patches[i], columns[c], columns[c + 1] - 1, rows[r], rows[r + 1] - 1, first_half_patch(r, c), last_half_patch(r, c));
+				temp = temp + temp2; 
+
+				if (last_half_patch(r, c) || rows[r + 1] == height) {
+					reg_morphed_patches.push_back(temp);
+					i++;
+					temp = Mat(height, width, CV_8U, cvScalar(0.));
+				}
 			}
 			else if (!pattern(r, c) ) {
-				reg_morphed_patches.push_back(weftRegression(morphed_patches[i], fixedPoints[i][0].x - padding, fixedPoints[i][3].x - padding, 
-					fixedPoints[i][0].y - padding, fixedPoints[i][3].y - padding, first_half_patch(r, c), last_half_patch(r, c) ));
+				reg_morphed_patches.push_back(morphed_patches[i]);
+				//cout << "weft " << columns[c] << "  " << columns[c + 1] << "  " << rows[r] << "  " << rows[r + 1] << endl;
+				//reg_morphed_patches.push_back(weftRegression(morphed_patches[i], columns[c], columns[c + 1]-1, rows[r], rows[r + 1]-1, first_half_patch(r, c), last_half_patch(r, c) ));
 				i++;
 			}
+			/// go to next grid if it is the last_half_patch
+
 		}
-	
 	}
 
 	return reg_morphed_patches;
