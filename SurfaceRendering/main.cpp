@@ -44,6 +44,11 @@ int main(int argc, char** argv)
 	get_aligned_masks();
 	int patch_num = get_patch_number();
 
+	MatrixXd m = get_first_half_patch();
+	cout << "patch-starting grids" << endl << m << endl << endl;
+	m = get_last_half_patch();
+	cout << "patch-ending grids" << endl << m << endl;
+
 	grayImage = imread("input/height.exr", IMREAD_GRAYSCALE); // Read the height map
 	if (!grayImage.data) // Check for invalid input
 	{
@@ -171,12 +176,10 @@ int main(int argc, char** argv)
 	* Obtaining Residual map
 	*/
 	std::cout << "************************Residual map section *************" << endl;
-	Mat residual = Mat::zeros(grayImage.rows, grayImage.cols, CV_32FC1);
-
 	grayImage.convertTo(grayImage, CV_32FC1, 1.0 / 255.0);
-	regularized.convertTo(regularized, CV_32FC1, 1.0 / 255.0);
-
-	///make the type of Mats same and ready for element-wise subtraction:
+	Mat residual = Mat::zeros(grayImage.rows, grayImage.cols, CV_32FC1);
+	
+	/////make the type of Mats same and ready for element-wise subtraction:
 	//string ty3 = type2str(regularized.type());
 	//printf("Matrix: %s %dx%d \n", ty3.c_str(), regularized.cols, regularized.rows);
 	//string ty4 = type2str(residual.type());
@@ -184,8 +187,8 @@ int main(int argc, char** argv)
 	//string ty5 = type2str(grayImage.type());
 	//printf("Matrix: %s %dx%d \n", ty5.c_str(), grayImage.cols, grayImage.rows);
 
-	subtract(grayImage, regularized, residual);
-	//residual = grayImage - regularized;
+	residual = grayImage - regularized;
+	cv::imshow("Residual Map", residual);	
 
 	///get the absolute value:
 	double min;
@@ -196,9 +199,26 @@ int main(int argc, char** argv)
 	residual.convertTo(adjMap, CV_8UC1, 255 / (max - min), -255 * min / (max - min));
 	cv::Mat falseColorsMap;
 	cv::applyColorMap(adjMap, falseColorsMap, cv::COLORMAP_AUTUMN);
-	cv::imshow("Residual Map", residual);
-
+	cv::imshow("Abs Residual Map", adjMap);
 	cv::imshow("Height Map", grayImage);
+
+	/*
+	* Visualization
+	*/
+	std::cout << "************************Visualization section *************" << endl;
+	Mat visualization2 = Mat::zeros(grayImage.cols, grayImage.rows, CV_32FC3);
+	for (int j = 227; j < 290; j++) {
+		for (int i = 115; i < 335; i++) {
+			cv::Point point;
+			double x = i;
+			double y = grayImage.cols - grayImage.at<float>(i, j) * 255.0;
+			double y2 = grayImage.cols - regularized.at<float>(i, j) * 255.0;
+			//cout << point <<endl;
+			circle(visualization2, Point(x, y), 1.0, Scalar(255, 0, 0), 2, 8);
+			circle(visualization2, Point(x, y2), 1.0, Scalar(0, 255, 255), 2, 8);
+		}
+	}
+	cv::imshow("Visualization patch", visualization2);
 	//////******************************* Masking section
 	///// now let's separate out the patches from regularized yarns
 	//Mat temp;

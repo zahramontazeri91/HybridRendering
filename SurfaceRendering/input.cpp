@@ -37,6 +37,14 @@ MatrixXd input_pattern() {
 		1, 1, 0, 1, 1, 0, 1,
 		1, 0, 1, 1, 0, 1, 1;
 
+	//pattern <<
+	//	1, 1, 0, 0, 1, 1, 0,
+	//	0, 1, 1, 0, 0, 1, 1,
+	//	1, 0, 1, 1, 0, 0, 1,
+	//	1, 1, 0, 0, 1, 1, 0,
+	//	0, 1, 1, 0, 0, 1, 1,
+	//	1, 0, 1, 1, 0, 0, 1;
+
 	return pattern;
 }
 
@@ -53,10 +61,13 @@ MatrixXd get_first_half_patch() {
 
 	for (int i = 0; i < c; i++) {
 		for (int j = 0; j < r; j++) {
-			int i_p = (i + 1) % c;
-			int j_p = (j + 1) % r;
+			int i_p = i - 1;
+			int j_p = j - 1;
+			if (j_p < 0) j_p = r - 1;
+			if (i_p < 0) i_p = c - 1;
+
 			if (pattern(j, i)) {
-				if (pattern(j, i) == pattern(j_p, i))
+				if (pattern(j, i) != pattern(j_p, i))
 				{
 					first_half_patch(j, i) = 1;
 				}
@@ -64,7 +75,7 @@ MatrixXd get_first_half_patch() {
 					first_half_patch(j, i) = 0;
 			}
 			else {
-				if (pattern(j,i) == pattern(j, i_p))
+				if (pattern(j,i) != pattern(j, i_p))
 				{
 					first_half_patch(j,i) = 1;
 				}
@@ -89,13 +100,11 @@ MatrixXd get_last_half_patch() {
 
 	for (int i = c-1; i >= 0; i--) {
 		for (int j = r-1; j >= 0; j--) {
-			int i_p = i - 1;
-			int j_p = j - 1; 
-			if (j_p < 0) j_p = r - 1;
-			if (i_p < 0) i_p = c - 1;
+			int i_p = (i + 1) % c;
+			int j_p = (j + 1) % r;
 
 			if (pattern(j, i)) {//warps
-				if (pattern(j, i) == pattern(j_p, i))
+				if (pattern(j, i) != pattern(j_p, i))
 				{
 					last_half_patch(j, i) = 1;
 				}
@@ -103,7 +112,7 @@ MatrixXd get_last_half_patch() {
 					last_half_patch(j, i) = 0;
 			}
 			else {//wefts
-				if (pattern(j, i) == pattern(j, i_p))
+				if (pattern(j, i) != pattern(j, i_p))
 				{
 					last_half_patch(j, i) = 1;
 				}
