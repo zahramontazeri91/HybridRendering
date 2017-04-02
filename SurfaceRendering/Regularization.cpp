@@ -23,15 +23,20 @@ using namespace Eigen;
 using namespace std;
 using namespace cv;
 
-double percent = 20.0;
-int overlap = 5;
+double percent = 50.0;
+int overlap = 0;
 int counter = 0;
 int width;
 int height;
 //initialize the theta vector
-Eigen::VectorXd theta(4);
+Eigen::VectorXd theta(1);
+Eigen::VectorXd theta_base(1);
 double x;
-Mat visualization = Mat::zeros(height, width, CV_32FC3);
+double constant = 180;
+double a0 = (180 - 150) / 2;
+double a1 = 4.0 / 20;
+double a2 = -1.0 * 20 / 2;
+double a3 = (180 - (180 - 150) / 2);
 
 // Generic functor
 template<typename _Scalar, int NX = Eigen::Dynamic, int NY = Eigen::Dynamic>
@@ -65,8 +70,8 @@ struct MyFunctor : Functor<double>
 		for (unsigned int i = 0; i < this->Points.size(); ++i)
 		{
 			//fvec(i) = this->Points[i](1) - (x(0) * sin(x(1)*this->Points[i](0) + x(2)) + x(3)); for sine-fitting
-			//fvec(i) = this->Points[i](1) - (x(0)); //for constant-fitting 
-			fvec(i) = this->Points[i](1) - (x(0) * tanh(x(1)*(this->Points[i](0) + x(2))) + x(3)); //two back-to-back tanh fitting
+			fvec(i) = this->Points[i](1) - (x(0)); //for constant-fitting 
+			//fvec(i) = this->Points[i](1) - (x(0) * tanh(x(1)*(this->Points[i](0) + x(2))) + x(3)); //two back-to-back tanh fitting
 		}
 
 		return 0;
@@ -74,7 +79,7 @@ struct MyFunctor : Functor<double>
 
 	Point2DVector Points;
 
-	int inputs() const { return 4; } // There are two parameters of the model
+	int inputs() const { return 1; } // There are two parameters of the model
 	int values() const { return this->Points.size(); } // The number of observations
 };
 
@@ -155,8 +160,7 @@ Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow, b
 
 		for (int i = startCol; i <= endCol; i++) {
 			indx = 0;
-			for (int j = startRow; j <= startRow + transition; j++) {
-				//circle(visualization, Point(indx, im_mat(j, i)), 1.0, Scalar(255, 0, 0), 2, 8);
+			for (int j = startRow; j <= endRow; j++) {
 				Eigen::Vector2d point;
 				point(0) = indx;
 				point(1) = im_mat(j, i);
@@ -166,24 +170,45 @@ Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow, b
 			col++;
 		}
 
-		double d = startRow + transition - min_row;
-
 		MyFunctorNumericalDiff functor;
 		functor.Points = points;
 		Eigen::LevenbergMarquardt<MyFunctorNumericalDiff> lm(functor);
-
 		Eigen::LevenbergMarquardtSpace::Status status = lm.minimize(theta);
-		//std::cout << "status: " << status << std::endl;
+		
+		/// Now, first row of the patch is fitted to find the base
+		Point2DVector points_base;
+		indx, col = 0;
+		for (int i = startCol; i <= endCol; i++) {
+			indx = 0;
+			for (int j = startRow; j <= startRow; j++) {
+				Eigen::Vector2d point_base;
+				point_base(0) = indx;
+				point_base(1) = im_mat(j, i);
+				points_base.push_back(point_base);
+				indx++;
+			}
+			col++;
+		}
+		MyFunctorNumericalDiff functor_base;
+		functor_base.Points = points_base;
+		Eigen::LevenbergMarquardt<MyFunctorNumericalDiff> lm_base(functor_base);
+		Eigen::LevenbergMarquardtSpace::Status status_base = lm_base.minimize(theta_base);
+
 
 		MatrixXd im_reg_mat = MatrixXd::Zero(im_mat.rows(), im_mat.cols());
+		double d = startRow + transition - min_row;
+		a0 = (theta(0) - theta_base(0)) / 2;
+		a1 = 4.0 / d;
+		a2 = -1.0 * d / 2;
+		a3 = (theta(0) - (theta(0) - theta_base(0)) / 2);
 
 		//cout << "min_row " << min_row << "startRow " << startRow << "startRow + transition " << startRow + transition << "endRow - transition " << endRow - transition << "endRow " << endRow << "max_row " << max_row << endl;
 
 		for (int i = min_col; i <= max_col; i++) {
 			x = 0;
 			for (int j = min_row; j < startRow + transition; j++) {
-				im_reg_mat(j, i) = (theta(0)) * tanh(theta(1)* (x + theta(2))) + (theta(3));
-				circle(visualization, Point(x, im_mat(j, i)), 1.0, Scalar(0, 255, 255), 2, 8);
+				//im_reg_mat(j, i) = (theta(0)) * tanh(theta(1)* (x + theta(2))) + (theta(3));
+				im_reg_mat(j, i) = a0 * tanh(a1* (x + a2)) + a3;
 				if (j >= startRow) x++;   // in order to copy the first value for the overlapping region 
 			}
 		}
@@ -191,18 +216,19 @@ Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow, b
 		// in order to copy the last value for the constant region in the middle 
 		for (int i = min_col; i <= max_col; i++) {
 			for (int j = startRow + transition; j <= max_row; j++) {
-				im_reg_mat(j, i) = (theta(0)) * tanh(theta(1)* (x + theta(2))) + (theta(3));
-				circle(visualization, Point(x, im_mat(j, i)), 1.0, Scalar(0, 255, 255), 2, 8);
+				//im_reg_mat(j, i) = (theta(0)) * tanh(theta(1)* (x + theta(2))) + (theta(3));
+				im_reg_mat(j, i) = a0 * tanh(a1* (x + a2)) + a3;
 			}
 		}
 
+		constant = a0 * tanh(a1* (x + a2)) + a3;
 
 		Mat regIm, temp;
 		cv::eigen2cv(im_reg_mat, temp);
 		temp.convertTo(regIm, CV_32FC1);
 		//imshow("regularized", regIm);
 		//cv::imwrite("Regressioned Patches/reg_patch_" + std::to_string(counter) + ".png", regIm);
-		std::cout << "theta for warp grid_" + std::to_string(counter) << ":  " << endl << theta << std::endl;
+		std::cout << "theta for warp grid_" + std::to_string(counter) << ":  " << endl << theta << "   " << theta_base << std::endl;
 		counter++;
 
 		return regIm;
@@ -276,36 +302,30 @@ Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow, b
 		cv2eigen(im, im_mat);
 		int transition = int((percent / 100.0) * (endRow - startRow));
 
-
 		MatrixXd im_reg_mat = MatrixXd::Zero(im_mat.rows(), im_mat.cols());
 
 		// in order to copy the last value for the constant region in the middle 
 		for (int i = min_col; i <= max_col; i++) {
 			for (int j = min_row; j < endRow - transition; j++) {
-				im_reg_mat(j, i) = (theta(0)) * tanh( theta(1)* (x + theta(2))) + (theta(3));
-				circle(visualization, Point(x, im_mat(j, i)), 1.0, Scalar(0, 255, 255), 2, 8);
+				im_reg_mat(j, i) = a0 * tanh( a1* (x + a2)) + a3;
 			}
 		}
 
 		for (int i = min_col; i <= max_col; i++) {
 			x = 0;
 			for (int j = endRow - transition; j <= max_row; j++) {
-				im_reg_mat(j, i) = (theta(0)) * tanh(-1 * theta(1)* (x + theta(2))) + (theta(3));
-				circle(visualization, Point(x, im_mat(j, i)), 1.0, Scalar(0, 255, 255), 2, 8);
+				//im_reg_mat(j, i) = (theta(0)) * tanh(-1 * theta(1)* (x + theta(2))) + (theta(3));
+				im_reg_mat(j, i) = a0 * tanh(-1 * a1* (x + a2)) + a3;
 				if (j <= endRow) x++;
 			}
 		}
-
-		//cv::imshow("Visualization", visualization);
-		cv::imwrite("Reg Visualization/grid_" + std::to_string(counter) + ".png", visualization);
-		visualization = Mat::zeros(height, width, CV_32FC3);
 
 		Mat regIm, temp;
 		cv::eigen2cv(im_reg_mat, temp);
 		temp.convertTo(regIm, CV_32FC1);
 		//imshow("regularized", regIm);
 		//cv::imwrite("Regressioned Patches/reg_patch_" + std::to_string(counter) + ".png", regIm);
-		std::cout << "theta for warp grid_" + std::to_string(counter) << ":  " << endl << theta << std::endl;
+		std::cout << "theta for warp grid_" + std::to_string(counter) << ":  " << endl << theta << "  " << theta_base << std::endl;
 		counter++;
 
 		return regIm;
@@ -377,12 +397,12 @@ Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow, b
 		MatrixXd im_mat;
 		cv2eigen(im, im_mat);
 		MatrixXd im_reg_mat = MatrixXd::Zero(im_mat.rows(), im_mat.cols());
+				
 
-		double y = (theta(0)) * tanh(-1 * theta(1)* (x + theta(2))) + (theta(3));
 		// in order to copy the last value for the constant region in the middle 
 		for (int i = min_col; i <= max_col; i++) {
 			for (int j = min_row; j <= max_row; j++) {
-				im_reg_mat(j, i) = y;
+				im_reg_mat(j, i) = constant;
 			}
 		}
 
@@ -392,7 +412,7 @@ Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow, b
 		temp.convertTo(regIm, CV_32FC1);
 		//imshow("regularized", regIm);
 		//cv::imwrite("Regressioned Patches/reg_patch_" + std::to_string(counter) + ".png", regIm);
-		std::cout << "theta for warp grid_" + std::to_string(counter) << ":  " << endl << y << std::endl;
+		std::cout << "theta for warp grid_" + std::to_string(counter) << ":  " << endl << constant << std::endl;
 		counter++;
 
 		return regIm;
@@ -471,7 +491,7 @@ Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow, b
 
 		for (int i = startCol; i <= endCol; i++) {
 			indx = 0;
-			for (int j = startRow; j <= startRow + transition; j++) {
+			for (int j = startRow; j <= endRow; j++) {
 				//indx = j + col*(endRow - startRow) + 1;
 				Eigen::Vector2d point;
 				point(0) = indx;
@@ -481,25 +501,48 @@ Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow, b
 			}
 			col++;
 		}
-
-		double d = startRow + transition - min_row;
-
-
 		MyFunctorNumericalDiff functor;
 		functor.Points = points;
 		Eigen::LevenbergMarquardt<MyFunctorNumericalDiff> lm(functor);
-
 		Eigen::LevenbergMarquardtSpace::Status status = lm.minimize(theta);
-		//std::cout << "status: " << status << std::endl;
+		
+		/// Now, first row of the patch is fitted to find the base
+		Point2DVector points_base;
+		indx, col = 0;
+		for (int i = startCol; i <= endCol; i++) {
+			indx = 0;
+			for (int j = startRow; j <= startRow; j++) {
+				//circle(visualization, Point(indx, im_mat(j, i)), 1.0, Scalar(255, 0, 0), 2, 8);
+				Eigen::Vector2d point_base;
+				point_base(0) = indx;
+				point_base(1) = im_mat(j, i);
+				points_base.push_back(point_base);
+				indx++;
+			}
+			col++;
+		}
+		MyFunctorNumericalDiff functor_base;
+		functor_base.Points = points_base;
+		Eigen::LevenbergMarquardt<MyFunctorNumericalDiff> lm_base(functor_base);
+		Eigen::LevenbergMarquardtSpace::Status status_base = lm_base.minimize(theta_base);
+
 
 		MatrixXd im_reg_mat = MatrixXd::Zero(im_mat.rows(), im_mat.cols());
 
 		//cout << "min_row " << min_row << "startRow " << startRow << "startRow + transition " << startRow + transition << "endRow - transition " << endRow - transition << "endRow " << endRow << "max_row " << max_row << endl;
 
+
+		double d = startRow + transition - min_row;
+		 a0 = (theta(0) - theta_base(0)) / 2;
+		 a1 = 4.0 / d;
+		 a2 = -1.0 * d / 2;
+		 a3 = (theta(0) - (theta(0) - theta_base(0)) / 2);
+
+
 		for (int i = min_col; i <= max_col; i++) {
 			x = 0;
 			for (int j = min_row; j < startRow + transition; j++) {
-				im_reg_mat(j, i) = (theta(0)) * tanh(theta(1)* (x + theta(2))) + (theta(3));
+				im_reg_mat(j, i) = a0 * tanh( a1* (x + a2)) + a3;
 				if (j >= startRow) x++;   // in order to copy the first value for the overlapping region 
 			}
 		}
@@ -507,14 +550,14 @@ Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow, b
 		// in order to copy the last value for the constant region in the middle 
 		for (int i = min_col; i <= max_col; i++) {
 			for (int j = startRow + transition; j < endRow - transition; j++) {
-				im_reg_mat(j, i) = (theta(0)) * tanh(theta(1)* (x + theta(2))) + (theta(3));
+				im_reg_mat(j, i) = a0 * tanh( a1* (x + a2)) + a3;
 			}
 		}
 
 		for (int i = min_col; i <= max_col; i++) {
 			x = 0;
 			for (int j = endRow - transition; j <= max_row; j++) {
-				im_reg_mat(j, i) = (theta(0)) * tanh(-1 * theta(1)* (x + theta(2))) + (theta(3));
+				im_reg_mat(j, i) = a0 * tanh(-1 * a1* (x + a2)) + a3;
 				if (j <= endRow) x++;
 			}
 		}
@@ -524,7 +567,7 @@ Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow, b
 		temp.convertTo(regIm, CV_32FC1);
 		//imshow("regularized", regIm);
 		//cv::imwrite("Regressioned Patches/reg_patch_" + std::to_string(counter) + ".png", regIm);
-		std::cout << "theta for warp grid_" + std::to_string(counter) << ":  " << endl << theta << std::endl;
+		std::cout << "theta for warp grid_" + std::to_string(counter) << ":  " << endl << theta << "  " << theta_base << std::endl;
 		counter++;
 
 		return regIm;
@@ -603,7 +646,7 @@ Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow, b
 		int transition = (percent / 100.0) * (endCol - startCol);
 		for (int i = startRow; i <= endRow; i++) {
 			indx = 0;
-			for (int j = startCol; j <= startCol + transition; j++) {
+			for (int j = startCol; j <= endCol; j++) {
 				//indx = j + row* (endCol - startCol) + 1;
 				Eigen::Vector2d point;
 				point(0) = indx;
@@ -613,22 +656,43 @@ Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow, b
 			}
 			row++;
 		}
-
 		MyFunctorNumericalDiff functor;
 		functor.Points = points;
 		Eigen::LevenbergMarquardt<MyFunctorNumericalDiff> lm(functor);
-
 		Eigen::LevenbergMarquardtSpace::Status status = lm.minimize(theta);
-		//std::cout << "status: " << status << std::endl;
+		
+		/// Now, first row of the patch is fitted to find the base
+		Point2DVector points_base;
+		indx, row = 0;
+		for (int i = startRow; i <= endRow; i++) {
+			indx = 0;
+			for (int j = startCol; j <= startCol; j++) {
+				//circle(visualization, Point(indx, im_mat(j, i)), 1.0, Scalar(255, 0, 0), 2, 8);
+				Eigen::Vector2d point_base;
+				point_base(0) = indx;
+				point_base(1) = im_mat(i,j);
+				points_base.push_back(point_base);
+				indx++;
+			}
+			row++;
+		}
+		MyFunctorNumericalDiff functor_base;
+		functor_base.Points = points_base;
+		Eigen::LevenbergMarquardt<MyFunctorNumericalDiff> lm_base(functor_base);
+		Eigen::LevenbergMarquardtSpace::Status status_base = lm_base.minimize(theta_base);
 
 		MatrixXd im_reg_mat = MatrixXd::Zero(im_mat.rows(), im_mat.cols());
-
 		double d = startCol + transition - min_col;
+		a0 = (theta(0) - theta_base(0)) / 2;
+		a1 = 4.0 / d;
+		a2 = -1.0 * d / 2;
+		a3 = (theta(0) - (theta(0) - theta_base(0)) / 2);
+
 		for (int i = min_row; i <= max_row; i++) {
 			x = 0;
 			for (int j = min_col; j < startCol + transition; j++) {
 				//im_reg_mat(i, j) = (theta(0) / 2.0) * tanh( 4.0 / d* (x - d / 2)) + (theta(0) / 2.0);
-				im_reg_mat(i, j) = (theta(0)) * tanh(theta(1)* (x + theta(2))) + (theta(3));
+				im_reg_mat(i, j) = a0 * tanh( a1* (x + a2)) + a3;
 				if (j >= startCol) x++;	// in order to copy the first value for the overlapping region 
 			}
 		}
@@ -636,16 +700,17 @@ Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow, b
 		// in order to copy the last value for the constant region in the middle 
 		for (int i = min_row; i <= max_row; i++) {
 			for (int j = startCol + transition; j <= max_col; j++) {
-				im_reg_mat(i, j) = (theta(0)) * tanh(theta(1)* (x + theta(2))) + (theta(3));
+				im_reg_mat(i, j) = a0 * tanh( a1* (x + a2)) + a3;
 			}
 		}
+		constant = a0 * tanh( a1* (x + a2)) + a3;
 
 		Mat regIm, temp;
 		cv::eigen2cv(im_reg_mat, temp);
 		temp.convertTo(regIm, CV_32FC1);
 		//imshow("regularized", regIm);
 		//cv::imwrite("Regressioned Patches/reg_patch_" + std::to_string(counter) + ".png", regIm);
-		std::cout << "theta for weft grid_" + std::to_string(counter) << ":  " << endl << theta << std::endl;
+		std::cout << "theta for weft grid_" + std::to_string(counter) << ":  " << endl << theta << "  " << theta_base << std::endl;
 		counter++;
 
 		return regIm;
@@ -718,38 +783,21 @@ Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow, b
 
 		Point2DVector points;
 		int indx, row = 0;
-
 		int transition = (percent / 100.0) * (endCol - startCol);
-		for (int i = startRow; i <= endRow; i++) {
-			indx = 0;
-			for (int j = startCol; j <= startCol + transition; j++) {
-				//indx = j + row* (endCol - startCol) + 1;
-				Eigen::Vector2d point;
-				point(0) = indx;
-				point(1) = im_mat(i, j);
-				points.push_back(point);
-				indx++;
-			}
-			row++;
-		}
-
-
 		MatrixXd im_reg_mat = MatrixXd::Zero(im_mat.rows(), im_mat.cols());
-
-		double d = startCol + transition - min_col;
 
 
 		// in order to copy the last value for the constant region in the middle 
 		for (int i = min_row; i <= max_row; i++) {
 			for (int j = min_col; j < endCol - transition; j++) {
-				im_reg_mat(i, j) = (theta(0)) * tanh(-1 * theta(1)* (x + theta(2))) + (theta(3));
+				im_reg_mat(i, j) = constant;
 			}
 		}
 
 		for (int i = min_row; i <= max_row; i++) {
 			x = 0;
 			for (int j = endCol - transition; j <= max_col; j++) {
-				im_reg_mat(i, j) = (theta(0)) * tanh( theta(1)* (x + theta(2))) + (theta(3));
+				im_reg_mat(i, j) = a0 * tanh(-1 * a1* (x + a2)) + a3;
 				if (j <= endCol) x++;	// in order to copy the first value for the overlapping region 
 			}
 		}
@@ -759,7 +807,7 @@ Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow, b
 		temp.convertTo(regIm, CV_32FC1);
 		//imshow("regularized", regIm);
 		//cv::imwrite("Regressioned Patches/reg_patch_" + std::to_string(counter) + ".png", regIm);
-		std::cout << "theta for weft grid_" + std::to_string(counter) << ":  " << endl << theta << std::endl;
+		std::cout << "theta for weft grid_" + std::to_string(counter) << ":  " << endl << theta << "  " << theta_base << std::endl;
 		counter++;
 
 		return regIm;
@@ -834,7 +882,7 @@ Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow, b
 		// in order to copy the last value for the constant region in the middle 
 		for (int i = min_row; i <= max_row; i++) {
 			for (int j = min_col; j <= max_col; j++) {
-				im_reg_mat(i, j) = (theta(0)) * tanh(-1 * theta(1)* (x + theta(2))) + (theta(3));
+				im_reg_mat(i, j) = constant;
 			}
 		}
 
@@ -843,7 +891,7 @@ Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow, b
 		temp.convertTo(regIm, CV_32FC1);
 		//imshow("regularized", regIm);
 		//cv::imwrite("Regressioned Patches/reg_patch_" + std::to_string(counter) + ".png", regIm);
-		std::cout << "theta for weft grid_" + std::to_string(counter) << ":  " << endl << 170 << std::endl;
+		std::cout << "theta for weft grid_" + std::to_string(counter) << ":  " << endl << constant << std::endl;
 		counter++;
 
 		return regIm;
@@ -917,10 +965,9 @@ Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow, b
 		Point2DVector points;
 		int indx, row = 0;
 
-		int transition = (percent / 100.0) * (endCol - startCol);
 		for (int i = startRow; i <= endRow; i++) {
 			indx = 0;
-			for (int j = startCol; j <= startCol + transition; j++) {
+			for (int j = startCol; j <= endCol; j++) {
 				//indx = j + row* (endCol - startCol) + 1;
 				Eigen::Vector2d point;
 				point(0) = indx;
@@ -934,18 +981,41 @@ Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow, b
 		MyFunctorNumericalDiff functor;
 		functor.Points = points;
 		Eigen::LevenbergMarquardt<MyFunctorNumericalDiff> lm(functor);
-
 		Eigen::LevenbergMarquardtSpace::Status status = lm.minimize(theta);
-		//std::cout << "status: " << status << std::endl;
+		
+		/// Now, first row of the patch is fitted to find the base
+		Point2DVector points_base;
+		indx, row = 0;
+		for (int i = startRow; i <= endRow; i++) {
+			indx = 0;
+			for (int j = startCol; j <= startCol; j++) {
+				//circle(visualization, Point(indx, im_mat(j, i)), 1.0, Scalar(255, 0, 0), 2, 8);
+				Eigen::Vector2d point_base;
+				point_base(0) = indx;
+				point_base(1) = im_mat(i,j);
+				points_base.push_back(point_base);
+				indx++;
+			}
+			row++;
+		}
+		MyFunctorNumericalDiff functor_base;
+		functor_base.Points = points_base;
+		Eigen::LevenbergMarquardt<MyFunctorNumericalDiff> lm_base(functor_base);
+		Eigen::LevenbergMarquardtSpace::Status status_base = lm_base.minimize(theta_base);
 
 		MatrixXd im_reg_mat = MatrixXd::Zero(im_mat.rows(), im_mat.cols());
-
+		int transition = (percent / 100.0) * (endCol - startCol);
 		double d = startCol + transition - min_col;
+		a0 = (theta(0) - theta_base(0)) / 2;
+		a1 = 4.0 / d;
+		a2 = -1.0 * d / 2;
+		a3 = (theta(0) - (theta(0) - theta_base(0)) / 2);
+
 		for (int i = min_row; i <= max_row; i++) {
 			x = 0;
 			for (int j = min_col; j < startCol + transition; j++) {
 				//im_reg_mat(i, j) = (theta(0) / 2.0) * tanh( 4.0 / d* (x - d / 2)) + (theta(0) / 2.0);
-				im_reg_mat(i, j) = (theta(0)) * tanh(theta(1)* (x + theta(2))) + (theta(3));
+				im_reg_mat(i, j) = a0 * tanh( a1* (x + a2)) + a3;
 				if (j >= startCol) x++;	// in order to copy the first value for the overlapping region 
 			}
 		}
@@ -953,14 +1023,14 @@ Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow, b
 		// in order to copy the last value for the constant region in the middle 
 		for (int i = min_row; i <= max_row; i++) {
 			for (int j = startCol + transition; j < endCol - transition; j++) {
-				im_reg_mat(i, j) = (theta(0)) * tanh(theta(1)* (x + theta(2))) + (theta(3));
+				im_reg_mat(i, j) = a0 * tanh( a1* (x + a2)) + a3;
 			}
 		}
 
 		for (int i = min_row; i <= max_row; i++) {
 			x = 0;
 			for (int j = endCol - transition; j <= max_col; j++) {
-				im_reg_mat(i, j) = (theta(0)) * tanh(-1 * theta(1)* (x + theta(2))) + (theta(3));
+				im_reg_mat(i, j) = a0 * tanh(-1 * a1* (x + a2)) + a3;
 				if (j <= endCol) x++;	// in order to copy the first value for the overlapping region 
 			}
 		}
@@ -970,7 +1040,7 @@ Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow, b
 		temp.convertTo(regIm, CV_32FC1);
 		//imshow("regularized", regIm);
 		//cv::imwrite("Regressioned Patches/reg_patch_" + std::to_string(counter) + ".png", regIm);
-		std::cout << "theta for weft grid_" + std::to_string(counter) << ":  " << endl << theta << std::endl;
+		std::cout << "theta for weft grid_" + std::to_string(counter) << ":  " << endl << theta << "  " << theta_base << std::endl;
 		counter++;
 
 		return regIm;
@@ -999,9 +1069,11 @@ vector<Mat> regularization(vector<Mat> morphed_patches, int padding) {
 	int rs = pattern.rows(); //6
 	width = columns[cs];
 	height = rows[rs];
-	theta << 170.0 / 2.0, 4.0 / 44, -1.0 * (44 / 2.0), 170.0 / 2.0;
+	theta << 180.0;
+	theta_base << 160.0;
+	//theta << 170.0 / 2.0, 4.0 / 44, -1.0 * (44 / 2.0), 170.0 / 2.0;
 
-	//int startCol, int endCol, int startRow, int endRow,
+
 	int i = 0;
 	Mat temp = Mat(height, width, CV_32FC1, cvScalar(0.));
 	for (int c = 0; c < cs; c++) {
@@ -1028,6 +1100,53 @@ vector<Mat> regularization(vector<Mat> morphed_patches, int padding) {
 
 		}
 	}
+
+	//int i = 0;
+	//Mat temp = Mat(height, width, CV_32FC1, cvScalar(0.));
+	//for (int c = 0; c < cs; c++) {
+	//	for (int r = 0; r < rs; r++) {
+	//		cout << c << r << endl;
+	//		if (pattern(r, c)) {
+	//			cout << "pattern(r, c)" << endl;
+	//			//Mat temp2 = morphed_patches[i];
+	//			Mat temp2 = warpRegression(morphed_patches[i], columns[c], columns[c + 1] -1 , rows[r], rows[r + 1] -1 , first_half_patch(r, c), last_half_patch(r, c));
+	//			temp2.convertTo(temp2, CV_32FC1, 1.0 / 255.0);
+	//			
+	//			//string ty4 = type2str(temp2.type());
+	//			//printf("Matrix: %s %dx%d \n", ty4.c_str(), temp2.cols, temp2.rows);
+	//			//string ty5 = type2str(temp.type());
+	//			//printf("Matrix: %s %dx%d \n", ty5.c_str(), temp.cols, temp.rows);
+
+	//			temp = temp + temp2;
+	//			if (last_half_patch(r, c) || rows[r + 1] == height) {
+	//				reg_morphed_patches.push_back(temp);
+	//				i++;
+	//				temp = Mat(height, width, CV_32FC1, cvScalar(0.));
+	//			}
+	//		}
+	//		else if (!pattern(r, c)) {
+	//			cout << "!pattern(r, c)" << endl;
+	//			Mat temp2 = weftRegression(morphed_patches[i], columns[c], columns[c + 1] - 1, rows[r], rows[r + 1] - 1, first_half_patch(r, c), last_half_patch(r, c));
+	//			//Mat temp2 = morphed_patches[i];
+	//			temp2.convertTo(temp2, CV_32FC1, 1.0 / 255.0);
+
+	//			//string ty4 = type2str(temp2.type());
+	//			//printf("Matrix: %s %dx%d \n", ty4.c_str(), temp2.cols, temp2.rows);
+	//			//string ty5 = type2str(temp.type());
+	//			//printf("Matrix: %s %dx%d \n", ty5.c_str(), temp.cols, temp.rows);
+
+	//			
+	//			temp = temp + temp2;
+	//			if (last_half_patch(r, c) || columns[c + 1] == width) {
+	//				reg_morphed_patches.push_back(temp);
+	//				i++;
+	//				temp = Mat(height, width, CV_32FC1, cvScalar(0.));
+	//			}
+	//		}
+	//		/// go to next grid if it is the last_half_patch
+
+	//	}
+	//}
 
 	return reg_morphed_patches;
 }

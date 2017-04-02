@@ -41,6 +41,17 @@ int main(int argc, char** argv)
 	* Input Reading section
 	*/ 
 	std::cout << "***************************Reading input section **************" << endl;
+	grayImage = imread("input/height.exr", IMREAD_GRAYSCALE); // Read the height map
+	//transpose(grayImage, grayImage);
+	//flip(grayImage, grayImage, 1);
+
+	if (!grayImage.data) // Check for invalid input
+	{
+		std::cout << "Could not open or find the image" << std::endl;
+		return -1;
+	}
+	cout << "height: " << grayImage.rows << "  width: " << grayImage.cols << endl;
+
 	get_aligned_masks();
 	int patch_num = get_patch_number();
 
@@ -48,14 +59,6 @@ int main(int argc, char** argv)
 	cout << "patch-starting grids" << endl << m << endl << endl;
 	m = get_last_half_patch();
 	cout << "patch-ending grids" << endl << m << endl;
-
-	grayImage = imread("input/height.exr", IMREAD_GRAYSCALE); // Read the height map
-	if (!grayImage.data) // Check for invalid input
-	{
-		std::cout << "Could not open or find the image" << std::endl;
-		return -1;
-	}
-
 
 	/*
 	* Segmentation section
@@ -99,20 +102,20 @@ int main(int argc, char** argv)
 	/*
 	* morphing section using the control points for each patch
 	*/
-	//cout << "************************ morphing section ********************* " << endl;
-	//for (int i = 0; i < patch_num; i++) {
-	//	Mat temp;
-	//	Mat grayImage_pad = ZeroPadding(grayImage, padding);
-	//	morphing(temp, grayImage_pad, movingPoints[i], fixedPoints[i]);
+	cout << "************************ morphing section ********************* " << endl;
+	for (int i = 0; i < patch_num; i++) {
+		Mat temp;
+		Mat grayImage_pad = ZeroPadding(grayImage, padding);
+		morphing(temp, grayImage_pad, movingPoints[i], fixedPoints[i]);
 
-	//	///change the size of the results back, before padding
-	//	// Setup a rectangle to define the region of interest with width and height
-	//	cv::Rect myROI(padding, padding, grayImage.cols, grayImage.rows);
-	//	//// Crop the full image to that image contained by the rectangle myROI
-	//	cv::Mat croppedTemp = temp(myROI);
-	//	croppedTemp.copyTo(morphed_patches[i], alignedMasks[i]);
-	//	imwrite("Morphed Patches/morphed_patch_" + std::to_string(i) + ".png", morphed_patches[i]);
-	//}
+		///change the size of the results back, before padding
+		// Setup a rectangle to define the region of interest with width and height
+		cv::Rect myROI(padding, padding, grayImage.cols, grayImage.rows);
+		//// Crop the full image to that image contained by the rectangle myROI
+		cv::Mat croppedTemp = temp(myROI);
+		croppedTemp.copyTo(morphed_patches[i], alignedMasks[i]);
+		imwrite("Morphed Patches/morphed_patch_" + std::to_string(i) + ".png", morphed_patches[i]);
+	}
 
 
 	/*
@@ -207,8 +210,8 @@ int main(int argc, char** argv)
 	*/
 	std::cout << "************************Visualization section *************" << endl;
 	Mat visualization2 = Mat::zeros(grayImage.cols, grayImage.rows, CV_32FC3);
-	for (int j = 227; j < 290; j++) {
-		for (int i = 115; i < 335; i++) {
+	for (int j = 250; j <= 250; j++) {
+		for (int i = 0; i < grayImage.rows; i++) {
 			cv::Point point;
 			double x = i;
 			double y = grayImage.cols - grayImage.at<float>(i, j) * 255.0;
