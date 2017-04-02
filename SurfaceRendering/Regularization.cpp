@@ -24,7 +24,7 @@ using namespace std;
 using namespace cv;
 
 double percent = 50.0;
-int overlap = 0;
+int overlap = 2;
 int counter = 0;
 int width;
 int height;
@@ -1074,12 +1074,39 @@ vector<Mat> regularization(vector<Mat> morphed_patches, int padding) {
 	//theta << 170.0 / 2.0, 4.0 / 44, -1.0 * (44 / 2.0), 170.0 / 2.0;
 
 
+	//int i = 0;
+	//Mat temp = Mat(height, width, CV_32FC1, cvScalar(0.));
+	//for (int c = 0; c < cs; c++) {
+	//	for (int r = 0; r < rs; r++) {
+	//		if (pattern(r, c)) {
+	//			Mat temp2 = warpRegression(morphed_patches[i], columns[c], columns[c + 1] -1 , rows[r], rows[r + 1] -1 , first_half_patch(r, c), last_half_patch(r, c));
+	//			temp = temp + temp2;
+	//			if (last_half_patch(r, c) || rows[r + 1] == height) {
+	//				reg_morphed_patches.push_back(temp);
+	//				i++;
+	//				temp = Mat(height, width, CV_32FC1, cvScalar(0.));
+	//			}
+	//		}
+	//		else if (!pattern(r, c) ) {
+	//			Mat temp2 = weftRegression(morphed_patches[i], columns[c], columns[c + 1] - 1, rows[r], rows[r + 1] - 1, first_half_patch(r, c), last_half_patch(r, c));
+	//			temp = temp + temp2;
+	//			if (last_half_patch(r, c) || columns[c + 1] == width) {
+	//				reg_morphed_patches.push_back(temp);
+	//				i++;
+	//				temp = Mat(height, width, CV_32FC1, cvScalar(0.));
+	//			}
+	//		}
+	//		/// go to next grid if it is the last_half_patch
+
+	//	}
+	//}
+
 	int i = 0;
 	Mat temp = Mat(height, width, CV_32FC1, cvScalar(0.));
 	for (int c = 0; c < cs; c++) {
 		for (int r = 0; r < rs; r++) {
 			if (pattern(r, c)) {
-				Mat temp2 = warpRegression(morphed_patches[i], columns[c], columns[c + 1] -1 , rows[r], rows[r + 1] -1 , first_half_patch(r, c), last_half_patch(r, c));
+				Mat temp2 = warpRegression(morphed_patches[i], columns[c], columns[c + 1] - 1, rows[r], rows[r + 1] - 1, first_half_patch(r, c), last_half_patch(r, c));
 				temp = temp + temp2;
 				if (last_half_patch(r, c) || rows[r + 1] == height) {
 					reg_morphed_patches.push_back(temp);
@@ -1087,17 +1114,21 @@ vector<Mat> regularization(vector<Mat> morphed_patches, int padding) {
 					temp = Mat(height, width, CV_32FC1, cvScalar(0.));
 				}
 			}
-			else if (!pattern(r, c) ) {
-				Mat temp2 = weftRegression(morphed_patches[i], columns[c], columns[c + 1] - 1, rows[r], rows[r + 1] - 1, first_half_patch(r, c), last_half_patch(r, c));
-				temp = temp + temp2;
-				if (last_half_patch(r, c) || columns[c + 1] == width) {
-					reg_morphed_patches.push_back(temp);
-					i++;
-					temp = Mat(height, width, CV_32FC1, cvScalar(0.));
-				}
-			}
 			/// go to next grid if it is the last_half_patch
+		}
+	}
 
+	for (int r = 0; r < rs; r++) {
+		for (int c = 0; c < cs; c++) {
+				if (!pattern(r, c)) {
+					Mat temp2 = weftRegression(morphed_patches[i], columns[c], columns[c + 1] - 1, rows[r], rows[r + 1] - 1, first_half_patch(r, c), last_half_patch(r, c));
+					temp = temp + temp2;
+					if (last_half_patch(r, c) || columns[c + 1] == width) {
+						reg_morphed_patches.push_back(temp);
+						i++;
+						temp = Mat(height, width, CV_32FC1, cvScalar(0.));
+					}
+				}
 		}
 	}
 

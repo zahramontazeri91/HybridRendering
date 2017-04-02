@@ -151,97 +151,97 @@ MatrixXd get_last_half_patch() {
 	return last_half_patch;
 }
 
-void get_aligned_masks() {
-
-	MatrixXd pattern = input_pattern();
-	VectorXd columns = input_columns();
-	VectorXd rows = input_rows();
-	int c = columns.size() - 1;  //7
-	int r = rows.size() - 1; //6
-	int width = columns[c];
-	int height = rows[r];
-	Mat mask_im;
-	MatrixXd half_patch = get_first_half_patch();
-	MatrixXd mask = MatrixXd::Zero(height, width);
-
-	for (int i = 0; i < c; i++) {
-		for (int j = 0; j < r; j++) {
-			for (int s = columns[i]; s < columns[i + 1]; s++) {
-				for (int t = rows[j]; t < rows[j + 1]; t++) {
-					mask(t, s) = 255;
-				}
-			}
-			if (!pattern(j, i) || (pattern(j, i) && (!half_patch(j, i) || rows[j + 1] == height))) {
-				eigen2cv(mask, mask_im);
-				cv::imwrite("input/aligned mask/patch_" + std::to_string(patch_num) + ".png", mask_im);
-				patch_num++;
-				mask = MatrixXd::Zero(height, width);
-			}
-		}
-	}
-
-	return;
-}
-//
 //void get_aligned_masks() {
 //
 //	MatrixXd pattern = input_pattern();
 //	VectorXd columns = input_columns();
 //	VectorXd rows = input_rows();
-//	cout << "pattern: " << endl << pattern << endl;
-//	cout << "columns: " << endl << columns << endl;
-//	cout << "rows: " << endl << rows << endl;
-//	int c = columns.size()-1;  //6
-//	int r = rows.size()-1; //7
+//	int c = columns.size() - 1;  //7
+//	int r = rows.size() - 1; //6
 //	int width = columns[c];
 //	int height = rows[r];
 //	Mat mask_im;
-//	MatrixXd last_half_patch = get_last_half_patch();
-//	MatrixXd first_half_patch = get_first_half_patch();
+//	MatrixXd half_patch = get_first_half_patch();
 //	MatrixXd mask = MatrixXd::Zero(height, width);
 //
-//	for (int i = 0; i < c  ; i++) {
-//		for (int j = 0; j < r  ; j++) {
-//			if (pattern(j, i)) {
-//
-//				for (int s = columns[i]; s < columns[i + 1]; s++) {
-//					for (int t = rows[j]; t < rows[j + 1]; t++) {
-//						mask(t, s) = 255;
-//					}
+//	for (int i = 0; i < c; i++) {
+//		for (int j = 0; j < r; j++) {
+//			for (int s = columns[i]; s < columns[i + 1]; s++) {
+//				for (int t = rows[j]; t < rows[j + 1]; t++) {
+//					mask(t, s) = 255;
 //				}
-//				if (last_half_patch(j, i) || rows[j + 1] == height) {
-//					eigen2cv(mask, mask_im);
-//					cv::imwrite("input/aligned mask/patch_" + std::to_string(patch_num) + ".png", mask_im);
-//					patch_num++;
-//					mask = MatrixXd::Zero(height, width);
-//				}
+//			}
+//			if (!pattern(j, i) || (pattern(j, i) && (!half_patch(j, i) || rows[j + 1] == height))) {
+//				eigen2cv(mask, mask_im);
+//				cv::imwrite("input/aligned mask/patch_" + std::to_string(patch_num) + ".png", mask_im);
+//				patch_num++;
+//				mask = MatrixXd::Zero(height, width);
 //			}
 //		}
 //	}
 //
-//	for (int i = 0; i < r; i++) {
-//		for (int j = 0; j < c; j++) {
-//			if (!pattern(i,j)) {
-//
-//				for (int s = columns[j]; s < columns[j + 1]; s++) {
-//					for (int t = rows[i]; t < rows[i + 1]; t++) {
-//						mask(t, s) = 255;
-//					}
-//				}
-//				if ( last_half_patch(i, j) || columns[j + 1] == width ) {
-//					eigen2cv(mask, mask_im);
-//					cv::imwrite("input/aligned mask/patch_" + std::to_string(patch_num) + ".png", mask_im);
-//					patch_num++;
-//					mask = MatrixXd::Zero(height, width);
-//				}
-//
-//			}
-//		}
-//	}
-//
-//
-//	return ;
+//	return;
 //}
+
+void get_aligned_masks() {
+
+	MatrixXd pattern = input_pattern();
+	VectorXd columns = input_columns();
+	VectorXd rows = input_rows();
+	cout << "pattern: " << endl << pattern << endl;
+	cout << "columns: " << endl << columns << endl;
+	cout << "rows: " << endl << rows << endl;
+	int c = columns.size()-1;  //6
+	int r = rows.size()-1; //7
+	int width = columns[c];
+	int height = rows[r];
+	Mat mask_im;
+	MatrixXd last_half_patch = get_last_half_patch();
+	MatrixXd first_half_patch = get_first_half_patch();
+	MatrixXd mask = MatrixXd::Zero(height, width);
+
+	for (int i = 0; i < c  ; i++) {
+		for (int j = 0; j < r  ; j++) {
+			if (pattern(j, i)) {
+
+				for (int s = columns[i]; s < columns[i + 1]; s++) {
+					for (int t = rows[j]; t < rows[j + 1]; t++) {
+						mask(t, s) = 255;
+					}
+				}
+				if (last_half_patch(j, i) || rows[j + 1] == height) {
+					eigen2cv(mask, mask_im);
+					cv::imwrite("input/aligned mask/patch_" + std::to_string(patch_num) + ".png", mask_im);
+					patch_num++;
+					mask = MatrixXd::Zero(height, width);
+				}
+			}
+		}
+	}
+
+	for (int i = 0; i < r; i++) {
+		for (int j = 0; j < c; j++) {
+			if (!pattern(i,j)) {
+
+				for (int s = columns[j]; s < columns[j + 1]; s++) {
+					for (int t = rows[i]; t < rows[i + 1]; t++) {
+						mask(t, s) = 255;
+					}
+				}
+				if ( last_half_patch(i, j) || columns[j + 1] == width ) {
+					eigen2cv(mask, mask_im);
+					cv::imwrite("input/aligned mask/patch_" + std::to_string(patch_num) + ".png", mask_im);
+					patch_num++;
+					mask = MatrixXd::Zero(height, width);
+				}
+
+			}
+		}
+	}
+
+
+	return ;
+}
 
 int get_patch_number() {
 	return (patch_num - 1);
