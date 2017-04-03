@@ -17,11 +17,11 @@ VectorXd input_columns() {
 	//VectorXd columns(8);
 	//columns << 0, 50, 134, 227, 290, 360, 440, 457;
 
-	//VectorXd columns(6);
-	//columns << 0, 55, 120, 200, 300, 350;
+	VectorXd columns(6);
+	columns << 0, 55, 120, 200, 300, 350;
 
-	VectorXd columns(7);
-	columns << 0, 115, 220, 335, 440, 565, 671;
+	//VectorXd columns(7);
+	//columns << 0, 115, 220, 335, 440, 565, 671;
 
 	return columns;
 }
@@ -31,11 +31,11 @@ VectorXd input_rows() {
 	//VectorXd rows(7);
 	//rows << 0, 115, 220, 335, 440, 565, 671;
 
-	//VectorXd rows(7);
-	//rows << 0, 50, 150, 260, 370, 500, 575;
+	VectorXd rows(7);
+	rows << 0, 50, 150, 260, 370, 500, 575;
 
-	VectorXd rows(8);
-	rows << 0, 50, 134, 227, 290, 360, 440, 457;
+	//VectorXd rows(8);
+	//rows << 0, 50, 134, 227, 290, 360, 440, 457;
 
 	return rows;
 }
@@ -53,24 +53,24 @@ MatrixXd input_pattern() {
 	//	1, 1, 0, 1, 1, 0, 1,
 	//	1, 0, 1, 1, 0, 1, 1;
 
-	//MatrixXd pattern(6,5);
-	//pattern <<
-	//	0, 0, 1, 0, 0,
-	//	0, 0, 0, 1, 0,
-	//	1, 0, 0, 0, 1,
-	//	0, 1, 0, 0, 0,
-	//	0, 0, 1, 0, 0,
-	//	0, 0, 0, 1, 0;
+	MatrixXd pattern(6,5);
+	pattern <<
+		0, 0, 1, 0, 0,
+		0, 0, 0, 1, 0,
+		1, 0, 0, 0, 1,
+		0, 1, 0, 0, 0,
+		0, 0, 1, 0, 0,
+		0, 0, 0, 1, 0;
 
-	MatrixXd pattern(7,6);
-	pattern << 
-		0, 0, 1, 0, 0, 1,
-		1, 0, 0, 1, 0, 0,
-		0, 1, 0, 0, 1, 0,
-		0, 0, 1, 0, 0, 1,
-		1, 0, 0, 1, 0, 0,
-		0, 1, 0, 0, 1, 0,
-		0, 0, 1, 0, 0, 1;
+	//MatrixXd pattern(7,6);
+	//pattern << 
+	//	0, 0, 1, 0, 0, 1,
+	//	1, 0, 0, 1, 0, 0,
+	//	0, 1, 0, 0, 1, 0,
+	//	0, 0, 1, 0, 0, 1,
+	//	1, 0, 0, 1, 0, 0,
+	//	0, 1, 0, 0, 1, 0,
+	//	0, 0, 1, 0, 0, 1;
 
 	return pattern;
 }
