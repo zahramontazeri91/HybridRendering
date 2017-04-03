@@ -42,8 +42,8 @@ int main(int argc, char** argv)
 	*/ 
 	std::cout << "***************************Reading input section **************" << endl;
 	grayImage = imread("input/height.exr", IMREAD_GRAYSCALE); // Read the height map
-	//transpose(grayImage, grayImage);
-	//flip(grayImage, grayImage, 1);
+	transpose(grayImage, grayImage);
+	flip(grayImage, grayImage, 1);
 
 	if (!grayImage.data) // Check for invalid input
 	{

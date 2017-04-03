@@ -788,13 +788,13 @@ Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow, b
 
 
 		// in order to copy the last value for the constant region in the middle 
-		for (int i = min_row; i <= max_row; i++) {
+		for (int i = min_row; i < max_row; i++) {
 			for (int j = min_col; j < endCol - transition; j++) {
 				im_reg_mat(i, j) = constant;
 			}
 		}
 
-		for (int i = min_row; i <= max_row; i++) {
+		for (int i = min_row; i < max_row; i++) {
 			x = 0;
 			for (int j = endCol - transition; j <= max_col; j++) {
 				im_reg_mat(i, j) = a0 * tanh(-1 * a1* (x + a2)) + a3;
@@ -1071,35 +1071,6 @@ vector<Mat> regularization(vector<Mat> morphed_patches, int padding) {
 	height = rows[rs];
 	theta << 180.0;
 	theta_base << 160.0;
-	//theta << 170.0 / 2.0, 4.0 / 44, -1.0 * (44 / 2.0), 170.0 / 2.0;
-
-
-	//int i = 0;
-	//Mat temp = Mat(height, width, CV_32FC1, cvScalar(0.));
-	//for (int c = 0; c < cs; c++) {
-	//	for (int r = 0; r < rs; r++) {
-	//		if (pattern(r, c)) {
-	//			Mat temp2 = warpRegression(morphed_patches[i], columns[c], columns[c + 1] -1 , rows[r], rows[r + 1] -1 , first_half_patch(r, c), last_half_patch(r, c));
-	//			temp = temp + temp2;
-	//			if (last_half_patch(r, c) || rows[r + 1] == height) {
-	//				reg_morphed_patches.push_back(temp);
-	//				i++;
-	//				temp = Mat(height, width, CV_32FC1, cvScalar(0.));
-	//			}
-	//		}
-	//		else if (!pattern(r, c) ) {
-	//			Mat temp2 = weftRegression(morphed_patches[i], columns[c], columns[c + 1] - 1, rows[r], rows[r + 1] - 1, first_half_patch(r, c), last_half_patch(r, c));
-	//			temp = temp + temp2;
-	//			if (last_half_patch(r, c) || columns[c + 1] == width) {
-	//				reg_morphed_patches.push_back(temp);
-	//				i++;
-	//				temp = Mat(height, width, CV_32FC1, cvScalar(0.));
-	//			}
-	//		}
-	//		/// go to next grid if it is the last_half_patch
-
-	//	}
-	//}
 
 	int i = 0;
 	Mat temp = Mat(height, width, CV_32FC1, cvScalar(0.));
@@ -1131,53 +1102,6 @@ vector<Mat> regularization(vector<Mat> morphed_patches, int padding) {
 				}
 		}
 	}
-
-	//int i = 0;
-	//Mat temp = Mat(height, width, CV_32FC1, cvScalar(0.));
-	//for (int c = 0; c < cs; c++) {
-	//	for (int r = 0; r < rs; r++) {
-	//		cout << c << r << endl;
-	//		if (pattern(r, c)) {
-	//			cout << "pattern(r, c)" << endl;
-	//			//Mat temp2 = morphed_patches[i];
-	//			Mat temp2 = warpRegression(morphed_patches[i], columns[c], columns[c + 1] -1 , rows[r], rows[r + 1] -1 , first_half_patch(r, c), last_half_patch(r, c));
-	//			temp2.convertTo(temp2, CV_32FC1, 1.0 / 255.0);
-	//			
-	//			//string ty4 = type2str(temp2.type());
-	//			//printf("Matrix: %s %dx%d \n", ty4.c_str(), temp2.cols, temp2.rows);
-	//			//string ty5 = type2str(temp.type());
-	//			//printf("Matrix: %s %dx%d \n", ty5.c_str(), temp.cols, temp.rows);
-
-	//			temp = temp + temp2;
-	//			if (last_half_patch(r, c) || rows[r + 1] == height) {
-	//				reg_morphed_patches.push_back(temp);
-	//				i++;
-	//				temp = Mat(height, width, CV_32FC1, cvScalar(0.));
-	//			}
-	//		}
-	//		else if (!pattern(r, c)) {
-	//			cout << "!pattern(r, c)" << endl;
-	//			Mat temp2 = weftRegression(morphed_patches[i], columns[c], columns[c + 1] - 1, rows[r], rows[r + 1] - 1, first_half_patch(r, c), last_half_patch(r, c));
-	//			//Mat temp2 = morphed_patches[i];
-	//			temp2.convertTo(temp2, CV_32FC1, 1.0 / 255.0);
-
-	//			//string ty4 = type2str(temp2.type());
-	//			//printf("Matrix: %s %dx%d \n", ty4.c_str(), temp2.cols, temp2.rows);
-	//			//string ty5 = type2str(temp.type());
-	//			//printf("Matrix: %s %dx%d \n", ty5.c_str(), temp.cols, temp.rows);
-
-	//			
-	//			temp = temp + temp2;
-	//			if (last_half_patch(r, c) || columns[c + 1] == width) {
-	//				reg_morphed_patches.push_back(temp);
-	//				i++;
-	//				temp = Mat(height, width, CV_32FC1, cvScalar(0.));
-	//			}
-	//		}
-	//		/// go to next grid if it is the last_half_patch
-
-	//	}
-	//}
 
 	return reg_morphed_patches;
 }
