@@ -41,12 +41,12 @@ int main(int argc, char** argv)
 	* Input Reading section
 	*/ 
 	std::cout << "***************************Reading input section **************" << endl;
-	//grayImage = imread("input/height.exr", IMREAD_GRAYSCALE); // Read the height map
+	grayImage = imread("input/height.exr", IMREAD_GRAYSCALE); // Read the height map
 
 	//transpose(grayImage, grayImage);
 	//flip(grayImage, grayImage, 1);
 
-	grayImage = imread("input/twillD1_od3_crop2_fix.exr", IMREAD_GRAYSCALE); 
+	//grayImage = imread("input/twillD1_od3_crop2_fix.exr", IMREAD_GRAYSCALE); 
 
 	if (!grayImage.data) // Check for invalid input
 	{
@@ -176,7 +176,7 @@ int main(int argc, char** argv)
 		regularized += unmorphed_reg_patches[i];
 	}
 	cv::imshow("Regularized Map", regularized);
-	//imwrite("Output/regularized.jpg", regularized);
+	imwrite("Output/regularized.exr", regularized);
 
 	/*
 	* Obtaining Residual map
@@ -206,6 +206,7 @@ int main(int argc, char** argv)
 	cv::Mat falseColorsMap;
 	cv::applyColorMap(adjMap, falseColorsMap, cv::COLORMAP_AUTUMN);
 	cv::imshow("Abs Residual Map", adjMap);
+	imwrite("Output/residual.exr", adjMap);
 	cv::imshow("Height Map", grayImage);
 
 	/*
@@ -213,7 +214,7 @@ int main(int argc, char** argv)
 	*/
 	std::cout << "************************Visualization section *************" << endl;
 	Mat visualization2 = Mat::zeros(grayImage.cols, grayImage.rows, CV_32FC3);
-	for (int j = 250; j <= 250; j++) {
+	for (int j = 100; j <= 100; j++) {
 		for (int i = 0; i < grayImage.rows; i++) {
 			cv::Point point;
 			double x = i;
