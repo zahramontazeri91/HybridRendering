@@ -9,8 +9,9 @@
 using namespace Eigen;
 using namespace cv;
 
-void fastLaplace(MatrixXd Dx, MatrixXd Dy, MatrixXd temp, MatrixXd& Lx, MatrixXd& Ly);
+void slowLaplace(MatrixXd Dx, MatrixXd Dy, MatrixXd temp, MatrixXd& Lx, MatrixXd& Ly);
 void morphing(Mat& img_new, Mat img, vector<Point> movingPoints, vector<Point> fixedPoints);
+void fastLaplace(MatrixXd Dx, MatrixXd Dy, MatrixXd id);
 
 #endif
 

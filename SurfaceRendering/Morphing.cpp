@@ -14,11 +14,29 @@ using namespace Eigen;
 using namespace std;
 using namespace cv;
 
+#include <opencv2/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <vector>
+#include <iostream>
+#include <Eigen/Dense>
+#include <Eigen/SparseCore>
+#include <Eigen/SparseCholesky>
+#include <unsupported/Eigen/MatrixFunctions>
+#include "ImageProcessing.h"
+#include "input.h"
+#include <Eigen/Sparse>
+#include <stdio.h>      /* printf */
+#include <math.h>  
+#include <unsupported/Eigen/NonLinearOptimization>
+//#include <unsupported/Eigen/LevenbergMarquardt>
+#include <opencv2/core/eigen.hpp>
+
 
 //fastLaplace(Dx, Dy, temp, Lx, Ly);
 
 /// solving Laplace's equation using the Jacobi method.
-void fastLaplace(MatrixXd Dx, MatrixXd Dy, MatrixXd temp, MatrixXd& Lx, MatrixXd& Ly) {
+void slowLaplace(MatrixXd Dx, MatrixXd Dy, MatrixXd temp, MatrixXd& Lx, MatrixXd& Ly) {
 	int n = Dx.rows();
 	int m = Dx.cols();
 	float tol = 1000;
@@ -85,7 +103,7 @@ void morphing(Mat& img_new, Mat img, vector<Point> movingPoints, vector<Point> f
 	}
 
 	MatrixXd Lx, Ly;
-	fastLaplace(dx, dy, temp, Lx, Ly);
+	slowLaplace(dx, dy, temp, Lx, Ly);
 
 	///display the Lx and Ly
 	//Mat t;
@@ -109,6 +127,77 @@ void morphing(Mat& img_new, Mat img, vector<Point> movingPoints, vector<Point> f
 	eigen2cv(img_new_mat, img_new);
 
 	return;
+}
+
+void fastLaplace(MatrixXd Dx, MatrixXd Dy, MatrixXd cp) {
+	int height = Dx.rows();
+	int width = Dx.cols();
+	MatrixXd Dx_pad = MatrixXd::Zero(height + 2, width + 2);
+	int height_pad = Dx_pad.rows();
+	int width_pad = Dx_pad.cols();
+	MatrixXd A = MatrixXd::Identity(height_pad*width_pad, height_pad*width_pad);
+	MatrixXd id(height_pad, width_pad);
+	VectorXd b = VectorXd::Zero(height_pad*width_pad);
+	MatrixXd Lx_pad(height_pad, width_pad);
+	MatrixXd Lx(height, width);
+
+	///Zero padding the input
+	for (int i = 1; i <= height; i++) {
+		for (int j = 1; j <= width; j++) {
+			Dx_pad(i, j) = Dx(i - 1, j - 1);
+		}
+	}
+
+	///define id matrix to convert Dx_pad and Dy_pad to a vector
+	int n = 0;
+	for (int i = 0; i < height_pad; i++) {
+		for (int j = 0; j < width_pad; j++) {
+			id(i, j) = n;
+			n++;
+		}
+	}
+
+	/// Create matrix A and Vector b
+	for (int i = 1; i <= height; i++) {
+		for (int j = 1; j <= width; j++) {
+			if (cp(i - 1, j - 1) < 1) {
+				int top_id = id(i - 1, j);
+				int bottom_id = id(i + 1, j);
+				int right_id = id(i , j + 1);
+				int left_id = id(i , j - 1);
+				cout << top_id << "  " << bottom_id << "  " << right_id << "  " << left_id << endl;
+				A(id(i, j), top_id) = -0.25;
+				A(id(i, j), bottom_id) = -0.25;
+				A(id(i, j), right_id) = -0.25;
+				A(id(i, j), left_id) = -0.25;
+			}
+			b(id(i, j)) = Dx_pad(i, j);
+		}
+	}
+
+
+	///solve the linear system Ax = b
+	VectorXd x = A.colPivHouseholderQr().solve(b);
+
+	///convert vector x to matrix
+	n = 0;
+	for (int i = 0; i < height_pad; i++) {
+		for (int j = 0; j < width_pad; j++) {
+			Lx_pad(i, j) = x(n);
+			n++;
+		}
+	}
+
+	///crop the margin
+	for (int i = 1; i <= height; i++) {
+		for (int j = 1; j <= width; j++) {
+			Lx(i-1, j-1) = Lx_pad(i, j);
+		}
+	}
+
+	while (1);
+	return;
+
 }
 
 //void fastLaplace(MatrixXd Dx, MatrixXd Dy, MatrixXd temp, MatrixXd& Lx, MatrixXd& Ly) {

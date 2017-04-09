@@ -226,90 +226,10 @@ int main(int argc, char** argv)
 		}
 	}
 	cv::imshow("Visualization patch", visualization2);
-	//////******************************* Masking section
-	///// now let's separate out the patches from regularized yarns
-	//Mat temp;
-	//weftsReg[0].copyTo(temp, alignedMasks[0]);
-	//reg_patches.push_back(temp);
-	//warpsReg[0].copyTo(temp, alignedMasks[1]);
-	//reg_patches.push_back(temp);
-	//weftsReg[3].copyTo(temp, alignedMasks[2]);
-	//reg_patches.push_back(temp);
-	//warpsReg[0].copyTo(temp, alignedMasks[3]);
-	//reg_patches.push_back(temp);
-	//warpsReg[1].copyTo(temp, alignedMasks[4]);
-	//reg_patches.push_back(temp);
-	//weftsReg[2].copyTo(temp, alignedMasks[5]);
-	//reg_patches.push_back(temp);
-	//warpsReg[1].copyTo(temp, alignedMasks[6]);
-	//reg_patches.push_back(temp);
-	//weftsReg[5].copyTo(temp, alignedMasks[7]);
-	//reg_patches.push_back(temp);
-	//warpsReg[2].copyTo(temp, alignedMasks[8]);
-	//reg_patches.push_back(temp);
-	//weftsReg[1].copyTo(temp, alignedMasks[9]);
-	//reg_patches.push_back(temp);
-	//warpsReg[2].copyTo(temp, alignedMasks[10]);
-	//reg_patches.push_back(temp);
-	//weftsReg[4].copyTo(temp, alignedMasks[11]);
-	//reg_patches.push_back(temp);
-	//warpsReg[2].copyTo(temp, alignedMasks[12]);
-	//reg_patches.push_back(temp);
-	//weftsReg[0].copyTo(temp, alignedMasks[13]);
-	//reg_patches.push_back(temp);
-	//warpsReg[3].copyTo(temp, alignedMasks[14]);
-	//reg_patches.push_back(temp);
-	//weftsReg[4].copyTo(temp, alignedMasks[15]);
-	//reg_patches.push_back(temp);
-	//warpsReg[3].copyTo(temp, alignedMasks[16]);
-	//reg_patches.push_back(temp);
-	//warpsReg[4].copyTo(temp, alignedMasks[17]);
-	//reg_patches.push_back(temp);
-	//weftsReg[2].copyTo(temp, alignedMasks[18]);
-	//reg_patches.push_back(temp);
-	//warpsReg[4].copyTo(temp, alignedMasks[19]);
-	//reg_patches.push_back(temp);
-	//weftsReg[5].copyTo(temp, alignedMasks[20]);
-	//reg_patches.push_back(temp);
-	//warpsReg[5].copyTo(temp, alignedMasks[21]);
-	//reg_patches.push_back(temp);
-	//weftsReg[1].copyTo(temp, alignedMasks[22]);
-	//reg_patches.push_back(temp);
-	//warpsReg[5].copyTo(temp, alignedMasks[23]);
-	//reg_patches.push_back(temp);
-	//weftsReg[4].copyTo(temp, alignedMasks[24]);
-	//reg_patches.push_back(temp);
-	//warpsReg[5].copyTo(temp, alignedMasks[25]);
-	//reg_patches.push_back(temp);
-	//weftsReg[0].copyTo(temp, alignedMasks[26]);
-	//reg_patches.push_back(temp);
-	//warpsReg[6].copyTo(temp, alignedMasks[27]);
-	//reg_patches.push_back(temp);
-	//weftsReg[3].copyTo(temp, alignedMasks[28]);
-	//reg_patches.push_back(temp);
-	//warpsReg[6].copyTo(temp, alignedMasks[29]);
-	//reg_patches.push_back(temp);
-
-	/// To check FastLaplace() is working
-	//MatrixXd Dx(4,5);
-	//Dx << 8.9, 8.9, 8.9, 8.9, 8.9,
-	//	8.4, 0, 0, 0, 9.2,
-	//	7.2, 0, 10.2, 0, 9.4,
-	//	6.1, 6.8, 7.7, 8.7, 6.1;
-	//MatrixXd Dy(4,5);
-	//Dy << 8.9, 8.9, 8.9, 8.9, 8.9,
-	//	8.4, 0, 0, 0, 9.2,
-	//	7.2, 0, 0, 0, 9.4,
-	//	6.1, 6.8, 7.7, 8.7, 6.1;
-	//MatrixXd temp(4,5);
-	//temp << 8.9, 8.9, 8.9, 8.9, 8.9,
-	//	8.4, 0, 0, 0, 9.2,
-	//	7.2, 0, 1, 0, 9.4,
-	//	6.1, 6.8, 7.7, 8.7, 6.1;
-	//MatrixXd Lx(4,5), Ly(4,5);
 
 	final = clock() - init;
-	std::cout << "the program is finished in "<< (double)final / ((double)CLOCKS_PER_SEC);
+	std::cout << "the program is finished in " << (double)final / ((double)CLOCKS_PER_SEC);
+
 
 	waitKey(0); // Wait for a keystroke in the window
 	return 0;
