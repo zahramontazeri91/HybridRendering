@@ -3,18 +3,23 @@
 #include <opencv2/imgproc/imgproc.hpp>
 //#include <opencv2/core/eigen.hpp>
 #include <iostream>
-#include <Eigen/Dense>
 #include <vector>
+#include <Eigen/Dense>
+#include <Eigen/SparseQR>
+#include <Eigen/Core>
 #include "ImageProcessing.h"
 #include "Regularization.h"
 #include "ControlPoints.h"
 #include "Morphing.h"
 #include "input.h"
 #include <time.h>
+#include <opencv2/core/eigen.hpp>
+#include <Eigen/Sparse>
 
 using Eigen::MatrixXd;
 using namespace cv;
 using namespace std;
+using namespace Eigen;
 
 int main(int argc, char** argv)
 {
@@ -42,7 +47,6 @@ int main(int argc, char** argv)
 	*/ 
 	std::cout << "***************************Reading input section **************" << endl;
 	grayImage = imread("input/height.exr", IMREAD_GRAYSCALE); // Read the height map
-
 	//transpose(grayImage, grayImage);
 	//flip(grayImage, grayImage, 1);
 
@@ -72,8 +76,9 @@ int main(int argc, char** argv)
 	}
 
 	for (int i = 0; i < patch_num; i++) {
-		masks.push_back(imread("input/aligned mask/patch_" + to_string(i + 1) + ".png", CV_LOAD_IMAGE_GRAYSCALE)); // CHANGED 
+		masks.push_back(imread("input/manually mask/patch_" + to_string(i + 1) + ".png", CV_LOAD_IMAGE_GRAYSCALE)); // CHANGED 
 	}
+
 	///mask the input to get all the patches 
 	for (int i = 0; i < patch_num; i++) {
 		Mat temp;
@@ -90,6 +95,7 @@ int main(int argc, char** argv)
 	*/
 	cout << "************************ Control Point section ********************* " << endl;
 	for (int i = 0; i < patch_num; i++) {
+		cout << "Control Points for patch " << i << " is matched."<<endl;
 		masks_pad.push_back( ZeroPadding(masks[i], padding));
 		alignedMasks_pad.push_back(ZeroPadding(alignedMasks[i], padding));
 		patches_pad.push_back(ZeroPadding(patches[i], padding));
@@ -157,6 +163,7 @@ int main(int argc, char** argv)
 		//string ty3 = type2str(gauss_masks[i].type());
 		//printf("Matrix: %s %dx%d \n", ty3.c_str(), gauss_masks[i].cols, gauss_masks[i].rows);
 
+
 		unmorphed_reg_patches[i] = cropped_morphed_yarn.mul(gauss_masks[i]);
 		imwrite("Unmorphed Reg/unmorphed_reg_patch_" + std::to_string(i) + ".png", unmorphed_reg_patches[i]);
 
@@ -171,12 +178,51 @@ int main(int argc, char** argv)
 	//for (int i = 0; i < patch_num; i++) { 
 	//	unmorphed_reg_patches[i] = cv::imread("Unmorphed Reg/unmorphed_reg_patch_" + std::to_string(i) + ".png", CV_LOAD_IMAGE_GRAYSCALE);
 	//}
+
+	/// Put the patches together but check if there is not overlapping with the existing patches
 	Mat regularized = unmorphed_reg_patches[0];
-	for (int i = 1; i < patch_num; i++) {
-		regularized += unmorphed_reg_patches[i];
+	int w = regularized.cols;
+	int h = regularized.rows;
+
+	for (int c = 0; c < w; c++) {
+		for (int r = 0; r < h; r++) {
+			double max = 0;
+			for (int i = 0; i < patch_num; i++) {
+				if (unmorphed_reg_patches[i].at< float >(r, c) > max)
+					max = unmorphed_reg_patches[i].at< float >(r, c);
+			}
+			regularized.at< float >(r, c) = max;
+		}
 	}
+
+	/*
+	* Some post processing
+	*/
+	//duplicate the one to the last pixels with the last one to remove any outlier that may have been produced during the process
+	for (int i = 0; i < w; i++) {
+		regularized.at< float >(0, i) = regularized.at< float >(5, i);
+		regularized.at< float >(h - 1, i) = regularized.at< float >(h - 6, i);
+	}
+	for (int i = 0; i < h; i++) {
+		regularized.at< float >(i,0) = regularized.at< float >(i,5);
+		regularized.at< float >(i, w-1) = regularized.at< float >(i, w-6);
+	}
+	//for (int c = 1; c < w-1; c++) {
+	//	for (int r = 1; r < h-1; r++) {
+	//		if (regularized.at< float >(r, c) < 0.4) {
+	//			//regularized.at< float >(r, c) = (regularized.at< float >(r + 1, c+1) + regularized.at< float >(r-1, c + 1) + regularized.at< float >(r + 1, c-1) + regularized.at< float >(r-1, c - 1) + regularized.at< float >(r + 1, c ) + regularized.at< float >(r , c + 1) + regularized.at< float >(r , c - 1) + regularized.at< float >(r - 1, c )) / 8.0;
+	//			///TO DO: we fill the zero pixels created on the patch bounderies with a canstant which is not correct!
+	//			regularized.at< float >(r, c) = 0.6;
+	//		}
+	//	}
+	//}
+
+	medianBlur(regularized, regularized, 3);
+	GaussianBlur(regularized, regularized, Size(15,15),0);
+
 	cv::imshow("Regularized Map", regularized);
-	imwrite("Output/regularized.exr", regularized);
+	Mat regularized_scaled = 255.0 - 255.0 * regularized; ///in order to be campatible with mitsuba (mitsuba lighten the obj from bottom side! so subtracted from 255)
+	cv::imwrite("Output/regularized.exr", regularized_scaled);
 
 	/*
 	* Obtaining Residual map
@@ -206,7 +252,9 @@ int main(int argc, char** argv)
 	cv::Mat falseColorsMap;
 	cv::applyColorMap(adjMap, falseColorsMap, cv::COLORMAP_AUTUMN);
 	cv::imshow("Abs Residual Map", adjMap);
-	imwrite("Output/residual.exr", adjMap);
+
+	Mat adjMap_scaled = 255.0 - adjMap; ///in order to be campatible with mitsuba (mitsuba lighten the obj from bottom side so subtracted from 255)
+	imwrite("Output/residual.exr", adjMap_scaled);
 	cv::imshow("Height Map", grayImage);
 
 	/*
@@ -226,6 +274,7 @@ int main(int argc, char** argv)
 		}
 	}
 	cv::imshow("Visualization patch", visualization2);
+
 
 	final = clock() - init;
 	std::cout << "the program is finished in " << (double)final / ((double)CLOCKS_PER_SEC);

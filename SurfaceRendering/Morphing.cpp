@@ -9,31 +9,120 @@
 #include <opencv2/core/eigen.hpp>
 #include <unsupported/Eigen/MatrixFunctions>
 #include "ImageProcessing.h"
+#include <Eigen/Sparse>
+#include <Eigen/IterativeLinearSolvers>
 
 using namespace Eigen;
 using namespace std;
 using namespace cv;
-
-#include <opencv2/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <vector>
-#include <iostream>
-#include <Eigen/Dense>
-#include <Eigen/SparseCore>
-#include <Eigen/SparseCholesky>
-#include <unsupported/Eigen/MatrixFunctions>
-#include "ImageProcessing.h"
-#include "input.h"
-#include <Eigen/Sparse>
-#include <stdio.h>      /* printf */
-#include <math.h>  
-#include <unsupported/Eigen/NonLinearOptimization>
-//#include <unsupported/Eigen/LevenbergMarquardt>
-#include <opencv2/core/eigen.hpp>
+typedef Eigen::SparseMatrix <double> SpMat;
 
 
-//fastLaplace(Dx, Dy, temp, Lx, Ly);
+MatrixXd fastLaplace(MatrixXd Dx, MatrixXd cp) {
+	int height = Dx.rows();
+	int width = Dx.cols();
+	MatrixXd Dx_pad = MatrixXd::Zero(height + 2, width + 2);
+	int height_pad = Dx_pad.rows();
+	int width_pad = Dx_pad.cols();
+	//MatrixXd A = MatrixXd::Identity(height_pad*width_pad, height_pad*width_pad);
+	SpMat A(height_pad*width_pad, height_pad*width_pad);
+	A.reserve(5 * height_pad*width_pad);
+
+
+	MatrixXd id(height_pad, width_pad);
+	VectorXd b = VectorXd::Zero(height_pad*width_pad);
+	MatrixXd Lx_pad(height_pad, width_pad);
+	MatrixXd Lx(height, width);
+
+	///Zero padding the input
+	for (int i = 1; i <= height; i++) {
+		for (int j = 1; j <= width; j++) {
+			Dx_pad(i, j) = Dx(i - 1, j - 1);
+		}
+	}
+
+	///define id matrix to convert Dx_pad and Dy_pad to a vector
+	int n = 0;
+	for (int i = 0; i < height_pad; i++) {
+		for (int j = 0; j < width_pad; j++) {
+			id(i, j) = n;
+			n++;
+		}
+	}
+
+	/// Create matrix A and Vector b
+	for (int i = 1; i <= height; i++) {
+		for (int j = 1; j <= width; j++) {
+			if (cp(i - 1, j - 1) < 1) {
+				int top_id = id(i - 1, j);
+				int bottom_id = id(i + 1, j);
+				int right_id = id(i, j + 1);
+				int left_id = id(i, j - 1);
+				cout << top_id << "  " << bottom_id << "  " << right_id << "  " << left_id << endl;
+				A.insert(id(i, j), top_id) = -0.25;
+				A.insert(id(i, j), bottom_id) = -0.25;
+				A.insert(id(i, j), right_id) = -0.25;
+				A.insert(id(i, j), left_id) = -0.25;
+			}
+			b(id(i, j)) = Dx_pad(i, j);
+		}
+	}
+
+	///solve the linear system Ax = b
+	A.makeCompressed();
+	SparseQR<SparseMatrix<double>, COLAMDOrdering<int>> solverA;
+	solverA.compute(A);
+	VectorXd x = solverA.solve(b);
+	///alternative ways:
+	//VectorXd x = A.colPivHouseholderQr().solve(b);
+	// or
+	//Eigen::SimplicialCholesky<SpMat> chol(A);  // performs a Cholesky factorization of A
+	//Eigen::VectorXd x = chol.solve(b);         // use the factorization to solve for the given right hand side
+
+	///convert vector x to matrix
+	n = 0;
+	for (int i = 0; i < height_pad; i++) {
+		for (int j = 0; j < width_pad; j++) {
+			Lx_pad(i, j) = x(n);
+			n++;
+		}
+	}
+
+	///crop the margin
+	for (int i = 1; i <= height; i++) {
+		for (int j = 1; j <= width; j++) {
+			Lx(i - 1, j - 1) = Lx_pad(i, j);
+		}
+	}
+
+	return Lx;
+
+#if 0
+	///check how to solve a sparce matrix linear system:
+	SparseMatrix<double> A(3, 3);
+	A.insert(0, 0) = 1;
+	A.insert(0, 1) = 1;
+	A.insert(0, 2) = 1;
+	A.insert(1, 0) = 0;
+	A.insert(1, 1) = 2;
+	A.insert(1, 2) = 5;
+	A.insert(2, 0) = 2;
+	A.insert(2, 1) = 5;
+	A.insert(2, 2) = -1;
+
+	A.makeCompressed();
+	SparseQR<SparseMatrix<double>, COLAMDOrdering<int>> solverA;
+	solverA.compute(A);
+
+	VectorXd B;
+	B.resize(3);
+	B << 6, -4, 27;
+
+	VectorXd X = solverA.solve(B);
+
+	cout << A << endl << B << endl << X << endl;
+#endif
+}
 
 /// solving Laplace's equation using the Jacobi method.
 void slowLaplace(MatrixXd Dx, MatrixXd Dy, MatrixXd temp, MatrixXd& Lx, MatrixXd& Ly) {
@@ -45,15 +134,15 @@ void slowLaplace(MatrixXd Dx, MatrixXd Dy, MatrixXd temp, MatrixXd& Lx, MatrixXd
 
 	Lx = Dx;
 	///iterate Jacobi until convergence
-	while (err > tol ) {
+	while (err > tol) {
 		k++;
-		for (int i = 1; i < n - 1; i++){
+		for (int i = 1; i < n - 1; i++) {
 			for (int j = 1; j < m - 1; j++) {
 				if (temp(i, j)) {
 					Lx(i, j) = Dx(i, j);
 				}
 				else {
-					Lx(i, j) = (Dx(i - 1, j) + Dx(i + 1, j) + Dx(i, j - 1) + Dx(i, j + 1) )*0.25;
+					Lx(i, j) = (Dx(i - 1, j) + Dx(i + 1, j) + Dx(i, j - 1) + Dx(i, j + 1))*0.25;
 				}
 			}
 		}
@@ -103,7 +192,11 @@ void morphing(Mat& img_new, Mat img, vector<Point> movingPoints, vector<Point> f
 	}
 
 	MatrixXd Lx, Ly;
+	
+	
 	slowLaplace(dx, dy, temp, Lx, Ly);
+	//Lx = fastLaplace(dx, temp);
+	//Ly = fastLaplace(dy, temp);
 
 	///display the Lx and Ly
 	//Mat t;
@@ -123,191 +216,8 @@ void morphing(Mat& img_new, Mat img, vector<Point> movingPoints, vector<Point> f
 		}
 	}
 	//TO DO change the size back
-	cout <<  "morphing() is returned ... " << endl;
+	cout << "morphing() is returned ... " << endl;
 	eigen2cv(img_new_mat, img_new);
 
 	return;
 }
-
-void fastLaplace(MatrixXd Dx, MatrixXd Dy, MatrixXd cp) {
-	int height = Dx.rows();
-	int width = Dx.cols();
-	MatrixXd Dx_pad = MatrixXd::Zero(height + 2, width + 2);
-	int height_pad = Dx_pad.rows();
-	int width_pad = Dx_pad.cols();
-	MatrixXd A = MatrixXd::Identity(height_pad*width_pad, height_pad*width_pad);
-	MatrixXd id(height_pad, width_pad);
-	VectorXd b = VectorXd::Zero(height_pad*width_pad);
-	MatrixXd Lx_pad(height_pad, width_pad);
-	MatrixXd Lx(height, width);
-
-	///Zero padding the input
-	for (int i = 1; i <= height; i++) {
-		for (int j = 1; j <= width; j++) {
-			Dx_pad(i, j) = Dx(i - 1, j - 1);
-		}
-	}
-
-	///define id matrix to convert Dx_pad and Dy_pad to a vector
-	int n = 0;
-	for (int i = 0; i < height_pad; i++) {
-		for (int j = 0; j < width_pad; j++) {
-			id(i, j) = n;
-			n++;
-		}
-	}
-
-	/// Create matrix A and Vector b
-	for (int i = 1; i <= height; i++) {
-		for (int j = 1; j <= width; j++) {
-			if (cp(i - 1, j - 1) < 1) {
-				int top_id = id(i - 1, j);
-				int bottom_id = id(i + 1, j);
-				int right_id = id(i , j + 1);
-				int left_id = id(i , j - 1);
-				cout << top_id << "  " << bottom_id << "  " << right_id << "  " << left_id << endl;
-				A(id(i, j), top_id) = -0.25;
-				A(id(i, j), bottom_id) = -0.25;
-				A(id(i, j), right_id) = -0.25;
-				A(id(i, j), left_id) = -0.25;
-			}
-			b(id(i, j)) = Dx_pad(i, j);
-		}
-	}
-
-
-	///solve the linear system Ax = b
-	VectorXd x = A.colPivHouseholderQr().solve(b);
-
-	///convert vector x to matrix
-	n = 0;
-	for (int i = 0; i < height_pad; i++) {
-		for (int j = 0; j < width_pad; j++) {
-			Lx_pad(i, j) = x(n);
-			n++;
-		}
-	}
-
-	///crop the margin
-	for (int i = 1; i <= height; i++) {
-		for (int j = 1; j <= width; j++) {
-			Lx(i-1, j-1) = Lx_pad(i, j);
-		}
-	}
-
-	while (1);
-	return;
-
-}
-
-//void fastLaplace(MatrixXd Dx, MatrixXd Dy, MatrixXd temp, MatrixXd& Lx, MatrixXd& Ly) {
-//	int a = Dx.cols();
-//	int b = Dx.rows();
-//	int n = a*b;
-//	int m = a*b;
-//
-//	///temp == rotatedBoundary(:, : , 1)
-//	///Dx == rotatedBoundary(:, : , 2)
-//	///Dy == rotatedBoundary(:, : , 3)
-//
-//	VectorXd AA(m);
-//	VectorXd BB(m);
-//	VectorXd i(m * 5);
-//	VectorXd j(m * 5);
-//	VectorXd s(m * 5);
-//
-//	double t = 0;
-//	double k;
-//
-//	for (int p = 0; p < m; p++) {
-//		double X = floor((p - 1) / a) + 1;
-//		double Y = p - (X - 1)*a;
-//		if (temp(Y, X) > 0) {
-//			i(t) = p;
-//			j(t) = p;
-//			s(t) = 1;
-//			t = t + 1;
-//			AA(p) = Dx(Y, X);
-//			BB(p) = Dy(Y, X);
-//		}
-//		else {
-//			i(t) = p;
-//			j(t) = p;
-//			s(t) = 1;
-//			t = t + 1;
-//
-//			k = 0;
-//			if ((p - a) > 0)
-//				k = k + 2;
-//			else if ((p - 1) > 0)
-//				k = k + 1;
-//
-//			if ((p + a) <= m)
-//				k = k + 2;
-//			else if ((p + 1) <= m)
-//				k = k + 1;
-//
-//			k = double(k);
-//
-//
-//			if ((p - a) > 0) {
-//				i(t) = p;
-//				j(t) = p - a;
-//				s(t) = double(-1.0 / k);
-//				t = t + 1;
-//				i(t) = p;
-//				j(t) = p - 1;
-//				s(t) = double(-1.0 / k);
-//				t = t + 1;
-//			}
-//			else if ((p - 1) > 0) {
-//				i(t) = p;
-//				j(t) = p - 1;
-//				s(t) = double(-1.0 / k);
-//				t = t + 1;
-//			}
-//			if ((p + a) <= m) {
-//				i(t) = p;
-//				j(t) = p + 1;
-//				s(t) = double(-1.0 / k);
-//				t = t + 1;
-//				i(t) = p;
-//				j(t) = p + a;
-//				s(t) = double(-1.0 / k);
-//				t = t + 1;
-//			}
-//			else if ((p + 1) <= m) {
-//				i(t) = p;
-//				j(t) = p + 1;
-//				s(t) = double(-1.0 / k);
-//				t = t + 1;
-//			}
-//		}//end else
-//	}//end first for
-//
-//	SparseMatrix<double> A(m, m);
-//	SparseMatrix<double> B(m, m);
-//	for (int ind1 = 0; ind1 < t-1; ind1++) {
-//		A.coeffRef(i(ind1), j(ind1)) = s(ind1);
-//		B.coeffRef(i(ind1), j(ind1)) = s(ind1);
-//	}
-//	//A = sparse(i(1:t - 1), j(1:t - 1), s(1:t - 1), m, m, m * 5);
-//	//B = sparse(i(1:t - 1), j(1:t - 1), s(1:t - 1), m, m, m * 5);
-//
-//	// Solving:
-//	SimplicialCholesky<SparseMatrix<double>> cholA(A);  // performs a Cholesky factorization of A
-//	VectorXd LA = cholA.solve(AA);         // use the factorization to solve for the given right hand side
-//
-//	SimplicialCholesky<SparseMatrix<double>> cholB(B);  // performs a Cholesky factorization of A
-//	VectorXd LB = cholB.solve(BB);         // use the factorization to solve for the given right hand side
-//
-//	//LA = A\AA;
-//	//LB = B\BB;
-//
-//	for (int e = 0; e < a; e++) {
-//		for (int w = 0; w < b; b++) {
-//			Ly(e, w) = LB(e + (w - 1)*a);
-//			Lx(e, w) = LA(e + (w - 1)*a);
-//		}
-//	}
-//}

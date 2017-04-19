@@ -25,6 +25,8 @@
 %	[data3D, stHeader] = Read_RAW_3DArray(fullFileName_RAW, stInputParameters);
 %
 %------------------------------------------------------------------------------
+ 
+%example: Read_RAW_3DArray('C:/Users/Zahra/Dropbox/Shuang/SurfaceRendering_matlab/gabardine_od_supertile.vol')
 
 function [data3D, stHeader] = Read_RAW_3DArray(fullFileName)
 
@@ -85,7 +87,7 @@ function [data3D, stHeader] = Read_RAW_3DArray(fullFileName)
             for y = [1:y_size]
                 for z = [z_size:-1:1]  %according to the cropped z value obtained using cropZ.m
                     %find i s.t. SigmaVj(from i to n) > 0.95 Sigma Vj(from 1 to n)
-                    if sum(vol_3D(x,y,1:z)) > 0.95*(sum(vol_3D(x,y,:)))
+                    if sum(vol_3D(x,y,1:z)) > 0.80*(sum(vol_3D(x,y,:)))
                        hdr(x,y)= z;
                        %disp(z);                 
                     end
@@ -110,7 +112,7 @@ function [data3D, stHeader] = Read_RAW_3DArray(fullFileName)
 %     end    
 
 
-      exrwrite( hdr, 'output/twillD1_od3_crop2_fix.exr' );
+      exrwrite( hdr, 'input/height.exr' );
       imagesc(hdr);
       axis on;
       grid on;

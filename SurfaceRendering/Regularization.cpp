@@ -24,7 +24,7 @@ using namespace std;
 using namespace cv;
 
 double percent = 50.0;
-int overlap = 2;
+int overlap = 17;
 int counter = 0;
 int width;
 int height;

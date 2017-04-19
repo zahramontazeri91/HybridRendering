@@ -1,16 +1,38 @@
-height = exrread('output/regularized.exr');
-height =  height(:,:,1);
+% for regularized map
+regularized = exrread('Output/regularized.exr');
+regularized =  regularized(:,:,1);
+[m,n] = size(regularized);
+y = 1:m;
+x = 1:n;
+%regularized = medfilt2(regularized, [21 21]);
+%regularized = imgaussfilt(regularized, 3);
 
-y = 1:671;
-x = 1:457;
 [X,Y] = meshgrid(x,y);
-s = surf(X,Y,height);
-set(s,'LineStyle','none')
+
+figure(1)
+axis equal
+mesh(X,Y,regularized)
 colorbar;
 xlabel('X');
 ylabel('Y');
 zlabel('Z');
 
-figure(2)
-mesh(X,Y,height)
-saveobjmesh('regularized_mesh.obj',X,Y,height)
+saveobjmesh('output/regularized_mesh.obj',X,Y,regularized)
+
+%%
+% visualize residual map
+% residual = exrread('Output/residual.exr');
+% residual =  residual(:,:,1);
+% 
+% figure(2)
+% imagesc(residual)
+% colorbar;
+
+%%
+
+% test = imread('input/manually mask/patch_1.png');
+% 	for i=2:30
+%         filename = ['input/manually mask/patch_' num2str(i) '.png'];
+% 		test = test + imread(filename);
+% end
+% imagesc(test);
