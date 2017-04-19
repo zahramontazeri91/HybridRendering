@@ -29,7 +29,8 @@
 %example: Read_RAW_3DArray('C:/Users/Zahra/Dropbox/Shuang/SurfaceRendering_matlab/gabardine_od_supertile.vol')
 
 function [data3D, stHeader] = Read_RAW_3DArray(fullFileName)
-
+    z_min = 1;
+    z_max = 170;
 	% Check syntax.  Must have at least one input argument, the full filename. 
 	if (nargin ~= 1)
 		error('Usage: stHeader = Read_RAW_Header(fullFilename)');
@@ -63,7 +64,7 @@ function [data3D, stHeader] = Read_RAW_3DArray(fullFileName)
     vol_3D = zeros(x_size, y_size, z_size);
     hdr = zeros(x_size,y_size);
     
-    for z = [1:z_size]
+    for z = [z_min:z_max]%according to the cropped z value obtained using cropZ.m
             for y = [1:y_size]
                 for x = [1:x_size]
                     vol_3D(x,y,z) = vol_1D((z-1)*(x_size*y_size) + (y-1)*x_size + x);
@@ -85,13 +86,13 @@ function [data3D, stHeader] = Read_RAW_3DArray(fullFileName)
 %is the top side of the sample -> having diagonal patern)
     for x = [1:x_size]
             for y = [1:y_size]
-                for z = [z_size:-1:1]  %according to the cropped z value obtained using cropZ.m
+                %for z = [z_size:-1:1] 
+                for z = [z_max:-1:z_min] %according to the cropped z value obtained using cropZ.m
                     %find i s.t. SigmaVj(from i to n) > 0.95 Sigma Vj(from 1 to n)
-                    if sum(vol_3D(x,y,1:z)) > 0.80*(sum(vol_3D(x,y,:)))
+                    if sum(vol_3D(x,y,1:z)) > 0.95*(sum(vol_3D(x,y,:)))
                        hdr(x,y)= z;
                        %disp(z);                 
                     end
-
                 end            
             end
     end
@@ -114,6 +115,7 @@ function [data3D, stHeader] = Read_RAW_3DArray(fullFileName)
 
       exrwrite( hdr, 'input/height.exr' );
       imagesc(hdr);
+      colorbar;
       axis on;
       grid on;
     

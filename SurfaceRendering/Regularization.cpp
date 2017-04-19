@@ -24,6 +24,7 @@ using namespace std;
 using namespace cv;
 
 double percent = 50.0;
+double percent_weft = 20.0;
 int overlap = 17;
 int counter = 0;
 int width;
@@ -310,12 +311,13 @@ Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow, b
 				im_reg_mat(j, i) = a0 * tanh( a1* (x + a2)) + a3;
 			}
 		}
+		double save_x = x;
 
 		for (int i = min_col; i <= max_col; i++) {
 			x = 0;
 			for (int j = endRow - transition; j <= max_row; j++) {
 				//im_reg_mat(j, i) = (theta(0)) * tanh(-1 * theta(1)* (x + theta(2))) + (theta(3));
-				im_reg_mat(j, i) = a0 * tanh(-1 * a1* (x + a2)) + a3;
+				im_reg_mat(j, i) = a0 * tanh( a1* ((save_x - x) + a2)) + a3;
 				if (j <= endRow) x++;
 			}
 		}
@@ -553,11 +555,11 @@ Mat warpRegression(Mat im, int startCol, int endCol, int startRow, int endRow, b
 				im_reg_mat(j, i) = a0 * tanh( a1* (x + a2)) + a3;
 			}
 		}
-
+		double save_x = x;
 		for (int i = min_col; i <= max_col; i++) {
 			x = 0;
 			for (int j = endRow - transition; j <= max_row; j++) {
-				im_reg_mat(j, i) = a0 * tanh(-1 * a1* (x + a2)) + a3;
+				im_reg_mat(j, i) = a0 * tanh( a1* (save_x - x + a2)) + a3;
 				if (j <= endRow) x++;
 			}
 		}
@@ -643,7 +645,7 @@ Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow, b
 		Point2DVector points;
 		int indx, row = 0;
 
-		int transition = (percent / 100.0) * (endCol - startCol);
+		int transition = (percent_weft / 100.0) * (endCol - startCol);
 		for (int i = startRow; i <= endRow; i++) {
 			indx = 0;
 			for (int j = startCol; j <= endCol; j++) {
@@ -783,7 +785,7 @@ Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow, b
 
 		Point2DVector points;
 		int indx, row = 0;
-		int transition = (percent / 100.0) * (endCol - startCol);
+		int transition = (percent_weft / 100.0) * (endCol - startCol);
 		MatrixXd im_reg_mat = MatrixXd::Zero(im_mat.rows(), im_mat.cols());
 
 
@@ -793,11 +795,12 @@ Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow, b
 				im_reg_mat(i, j) = constant;
 			}
 		}
+		double save_x = x;
 
 		for (int i = min_row; i < max_row; i++) {
 			x = 0;
 			for (int j = endCol - transition; j <= max_col; j++) {
-				im_reg_mat(i, j) = a0 * tanh(-1 * a1* (x + a2)) + a3;
+				im_reg_mat(i, j) = a0 * tanh(a1* (save_x - x + a2)) + a3;
 				if (j <= endCol) x++;	// in order to copy the first value for the overlapping region 
 			}
 		}
@@ -1004,7 +1007,7 @@ Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow, b
 		Eigen::LevenbergMarquardtSpace::Status status_base = lm_base.minimize(theta_base);
 
 		MatrixXd im_reg_mat = MatrixXd::Zero(im_mat.rows(), im_mat.cols());
-		int transition = (percent / 100.0) * (endCol - startCol);
+		int transition = (percent_weft / 100.0) * (endCol - startCol);
 		double d = startCol + transition - min_col;
 		a0 = (theta(0) - theta_base(0)) / 2;
 		a1 = 4.0 / d;
@@ -1026,11 +1029,11 @@ Mat weftRegression(Mat im, int startCol, int endCol, int startRow, int endRow, b
 				im_reg_mat(i, j) = a0 * tanh( a1* (x + a2)) + a3;
 			}
 		}
-
+		double save_x = x;
 		for (int i = min_row; i <= max_row; i++) {
 			x = 0;
 			for (int j = endCol - transition; j <= max_col; j++) {
-				im_reg_mat(i, j) = a0 * tanh(-1 * a1* (x + a2)) + a3;
+				im_reg_mat(i, j) = a0 * tanh(a1* (save_x - x + a2)) + a3;
 				if (j <= endCol) x++;	// in order to copy the first value for the overlapping region 
 			}
 		}

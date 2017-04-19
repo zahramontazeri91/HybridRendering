@@ -198,7 +198,7 @@ int main(int argc, char** argv)
 	/*
 	* Some post processing
 	*/
-	//duplicate the one to the last pixels with the last one to remove any outlier that may have been produced during the process
+	///duplicate the one to the last pixels with the last one to remove any outlier that may have been produced during the process
 	for (int i = 0; i < w; i++) {
 		regularized.at< float >(0, i) = regularized.at< float >(5, i);
 		regularized.at< float >(h - 1, i) = regularized.at< float >(h - 6, i);
@@ -207,18 +207,16 @@ int main(int argc, char** argv)
 		regularized.at< float >(i,0) = regularized.at< float >(i,5);
 		regularized.at< float >(i, w-1) = regularized.at< float >(i, w-6);
 	}
-	//for (int c = 1; c < w-1; c++) {
-	//	for (int r = 1; r < h-1; r++) {
-	//		if (regularized.at< float >(r, c) < 0.4) {
-	//			//regularized.at< float >(r, c) = (regularized.at< float >(r + 1, c+1) + regularized.at< float >(r-1, c + 1) + regularized.at< float >(r + 1, c-1) + regularized.at< float >(r-1, c - 1) + regularized.at< float >(r + 1, c ) + regularized.at< float >(r , c + 1) + regularized.at< float >(r , c - 1) + regularized.at< float >(r - 1, c )) / 8.0;
-	//			///TO DO: we fill the zero pixels created on the patch bounderies with a canstant which is not correct!
-	//			regularized.at< float >(r, c) = 0.6;
-	//		}
-	//	}
-	//}
+	for (int c = 1; c < w-1; c++) {
+		for (int r = 1; r < h-1; r++) {
+			if (regularized.at< float >(r, c) < 0.4) {
+				regularized.at< float >(r, c) = (regularized.at< float >(r + 1, c+1) + regularized.at< float >(r-1, c + 1) + regularized.at< float >(r + 1, c-1) + regularized.at< float >(r-1, c - 1) + regularized.at< float >(r + 1, c ) + regularized.at< float >(r , c + 1) + regularized.at< float >(r , c - 1) + regularized.at< float >(r - 1, c )) / 8.0;
+			}
+		}
+	}
 
-	medianBlur(regularized, regularized, 3);
-	GaussianBlur(regularized, regularized, Size(15,15),0);
+	//medianBlur(regularized, regularized, 3);
+	GaussianBlur(regularized, regularized, Size(7,7),0);
 
 	cv::imshow("Regularized Map", regularized);
 	Mat regularized_scaled = 255.0 - 255.0 * regularized; ///in order to be campatible with mitsuba (mitsuba lighten the obj from bottom side! so subtracted from 255)

@@ -4,18 +4,18 @@ regularized =  regularized(:,:,1);
 [m,n] = size(regularized);
 y = 1:m;
 x = 1:n;
-%regularized = medfilt2(regularized, [21 21]);
-%regularized = imgaussfilt(regularized, 3);
+%regularized = medfilt2(regularized, [7 7]);
+regularized = imgaussfilt(regularized, 3);
 
 [X,Y] = meshgrid(x,y);
 
-figure(1)
-axis equal
-mesh(X,Y,regularized)
-colorbar;
-xlabel('X');
-ylabel('Y');
-zlabel('Z');
+% figure(1)
+% axis equal
+% mesh(X,Y,regularized)
+% colorbar;
+% xlabel('X');
+% ylabel('Y');
+% zlabel('Z');
 
 saveobjmesh('output/regularized_mesh.obj',X,Y,regularized)
 

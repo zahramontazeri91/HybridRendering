@@ -2,12 +2,66 @@
 
 <scene version="0.5.0">
 
+	<integrator type="volpath_simple">
+		<integer name="maxDepth" value="8"/>
+	</integrator>
+
 	<shape type="heightfield">
-		<string name="filename" value="residual.exr"/>
+		<string name="filename" value="../input/height.exr"/>
 		<float name="scale" value="0.0003"/>
 		<transform name="toWorld">
 			<scale y="0.671" x="0.457"/>
 		</transform>
 	</shape>
+
+	<medium type="heterogeneous" id="med">
+		<float name="scale" value="300.0"/>
+		<string name="method" value="woodcock"/>
+
+		<volume name="density" type="gridvolume">
+			<string name="filename" value="C:/Users/Zahra/Dropbox/Shuang/SurfaceRendering_matlab/gabardine_od_supertile.vol"/>
+		</volume>
+		<volume name="albedo" type="constvolume">
+			<spectrum name="value" value="0.9"/>
+		</volume>
+	</medium>
+
+	<shape type="cube">
+		<transform name="toWorld">
+			<scale y="0.671" x="0.457" z = "0.1"/>
+		</transform>
+		<ref name="interior" id="med"/>
+	</shape>	
+
+	<sensor type="perspective">
+		<float name="focusDistance" value="1.25668"/>
+		<float name="fov" value="45.8402"/>
+		<string name="fovAxis" value="x"/>
+		<transform name="toWorld">
+			<scale x="-1"/>
+			<lookat target="0.0, 0.0, 0.0" origin="0.0, 1.0, 0.0" up="0.0, 0.0, 1.0"/>
+		</transform>
+
+		<sampler type="ldsampler">
+			<integer name="sampleCount" value="64"/>
+		</sampler>
+
+		<film type="hdrfilm">
+			<integer name="width" value="457"/>
+			<integer name="height" value="671"/>
+
+			<rfilter type="gaussian"/>
+		</film>
+	</sensor>
+
+	<shape type="sphere">
+		<point name="center" x="0" y="0" z="20"/>
+		<float name="radius" value=".2"/>
+
+		<emitter type="area">
+			<spectrum name="radiance" value="1000"/>
+		</emitter>
+	</shape>
+
   
 </scene>
