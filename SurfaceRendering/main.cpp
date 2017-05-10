@@ -15,6 +15,7 @@
 #include <time.h>
 #include <opencv2/core/eigen.hpp>
 #include <Eigen/Sparse>
+#include "Segmentation.h"
 
 using Eigen::MatrixXd;
 using namespace cv;
@@ -49,6 +50,15 @@ int main(int argc, char** argv)
 	grayImage = imread("input/height.exr", IMREAD_GRAYSCALE); // Read the height map
 	//transpose(grayImage, grayImage);
 	//flip(grayImage, grayImage, 1);
+	double min_z, max_z;
+	cv::minMaxLoc(grayImage, &min_z, &max_z);
+	cout << "Max and min of the Z: " <<min_z << "   " << max_z << endl;
+
+	///store flipped version of heightmap which is handy for rendering in mitsuba
+	Mat grayImage_flipped;
+	flip(grayImage, grayImage_flipped, 0);
+	imwrite("input/height_flipped.exr", grayImage_flipped);
+
 
 	//grayImage = imread("input/twillD1_od3_crop2_fix.exr", IMREAD_GRAYSCALE); 
 
@@ -75,8 +85,9 @@ int main(int argc, char** argv)
 		alignedMasks.push_back( imread("input/aligned mask/patch_"+ to_string(i+1)+ ".png", CV_LOAD_IMAGE_GRAYSCALE) );
 	}
 
+	segmentation();
 	for (int i = 0; i < patch_num; i++) {
-		masks.push_back(imread("input/manually mask/patch_" + to_string(i + 1) + ".png", CV_LOAD_IMAGE_GRAYSCALE)); // CHANGED 
+		masks.push_back(imread("input/auto manually mask/patch_" + to_string(i + 1) + ".png", CV_LOAD_IMAGE_GRAYSCALE)); // CHANGED 
 	}
 
 	///mask the input to get all the patches 
@@ -219,6 +230,7 @@ int main(int argc, char** argv)
 	GaussianBlur(regularized, regularized, Size(7,7),0);
 
 	cv::imshow("Regularized Map", regularized);
+	 
 	Mat regularized_scaled = 255.0 - 255.0 * regularized; ///in order to be campatible with mitsuba (mitsuba lighten the obj from bottom side! so subtracted from 255)
 	cv::imwrite("Output/regularized.exr", regularized_scaled);
 
@@ -239,6 +251,7 @@ int main(int argc, char** argv)
 
 	residual = grayImage - regularized;
 	cv::imshow("Residual Map", residual);	
+	imwrite("Output/residual_negative.exr", residual);
 
 	///get the absolute value:
 	double min;
@@ -246,13 +259,15 @@ int main(int argc, char** argv)
 	cv::minMaxIdx(residual, &min, &max);
 	cv::Mat adjMap;
 	// expand your range to 0..255. Similar to histEq();
-	residual.convertTo(adjMap, CV_8UC1, 255 / (max - min), -255 * min / (max - min));
+	residual.convertTo(adjMap, CV_8UC1, 170 / (max - min), -170 * min / (max - min)); ///TO DO: make it automatic to be read (170) from the input
 	cv::Mat falseColorsMap;
 	cv::applyColorMap(adjMap, falseColorsMap, cv::COLORMAP_AUTUMN);
 	cv::imshow("Abs Residual Map", adjMap);
 
-	Mat adjMap_scaled = 255.0 - adjMap; ///in order to be campatible with mitsuba (mitsuba lighten the obj from bottom side so subtracted from 255)
-	imwrite("Output/residual.exr", adjMap_scaled);
+	Mat adjMap_flipped;
+	flip(adjMap, adjMap_flipped,0);
+	imwrite("Output/residual.exr", adjMap_flipped);
+
 	cv::imshow("Height Map", grayImage);
 
 	/*
@@ -276,7 +291,6 @@ int main(int argc, char** argv)
 
 	final = clock() - init;
 	std::cout << "the program is finished in " << (double)final / ((double)CLOCKS_PER_SEC);
-
 
 	waitKey(0); // Wait for a keystroke in the window
 	return 0;

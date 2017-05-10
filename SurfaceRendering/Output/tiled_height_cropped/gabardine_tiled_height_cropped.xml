@@ -1,0 +1,106 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!--
+
+	Automatically converted from Wavefront OBJ
+
+-->
+
+<scene version="0.5.0">
+	<integrator type="volpath">
+		<integer name="maxDepth" value="-1"/>
+	</integrator>
+
+	<!--
+ 	<emitter type="constant">
+		<spectrum name="radiance" value="0.75"/>
+	</emitter>
+	-->
+	<emitter type="directional">
+		<spectrum name="irradiance" value="4"/>
+		<vector name="direction" x="0" y="0" z="-1"/>
+	</emitter>
+	
+	<shape type="heightfield">
+		<!-- <string name="filename" value="heightmap.exr"/> -->
+		<texture type="instancedbitmap" name="heightMap">
+			<string name="filename" value="heightmap.exr"/>
+			<float name="gamma" value="1"/>
+			<string name="filterType" value="nearest"/>
+			<integer name="divideX" value="1"/>
+			<integer name="divideY" value="1"/>
+			<integer name="tileX" value="40"/>
+			<integer name="tileY" value="60"/>
+		</texture>
+		<transform name="toWorld">
+			<scale x="0.3315" y="0.2258"/>
+		</transform>
+		
+		<bsdf type="heightmapbsdf">
+			<texture type="instancedbitmap" name="tangentMap">
+				<string name="filename" value="TangentMap.jpg"/>
+				<float name="gamma" value="1"/>
+				<string name="filterType" value="nearest"/>
+				<integer name="divideX" value="1"/>
+				<integer name="divideY" value="1"/>
+				<integer name="tileX" value="40"/>
+				<integer name="tileY" value="60"/>
+			</texture>
+			<spectrum name="Kd" value="0.0561,0.0002,0.0001"/>
+			<spectrum name="Ks" value="0.1767,0.0018,0.0013"/>
+			<spectrum name="Beta" value="0.2474 0.2146 0.2143"/>
+		</bsdf>
+	</shape>
+	
+ 	<shape type="rectangle">
+		<transform name="toWorld">
+			<scale x="20" y="20"/>
+			<translate z="-0.01"/>
+		</transform>
+		<bsdf type="diffuse">
+			<spectrum name="reflectance" value="0.3"/>
+		</bsdf>
+	</shape> 
+
+<!-- 	<sensor type="perspective">
+		<transform name="toWorld">
+			<lookat target="0, 0, 0" origin="0, 0, 10" up="0, 1, 0"/> -->
+			<!-- Top View 
+			<lookat target="0, 0, 0" origin="0, 7, 7" up="0, 0, 1"/>
+			  -->
+<!-- 		</transform>
+		<float name="fov" value="5"/>
+
+		<sampler type="ldsampler">
+			<integer name="sampleCount" value="64"/>
+		</sampler>
+
+		<film type="hdrfilm">
+			<integer name="width" value="640"/>
+			<integer name="height" value="480"/>
+			<boolean name="banner" value="false"/>
+			<rfilter type="gaussian"/>
+		</film>
+	</sensor> -->
+	
+		<sensor type="perspective">
+		<float name="focusDistance" value="1.25668"/>
+		<float name="fov" value="45.8402"/>
+		<string name="fovAxis" value="x"/>
+		<transform name="toWorld">
+			<scale x="-1"/>
+			<lookat target="0.0, 0.0, 0.0" origin="0.0, 1.0, 10.0" up="0.0, 0.0, 1.0"/>
+		</transform>
+
+		<sampler type="ldsampler">
+			<integer name="sampleCount" value="64"/>
+		</sampler>
+
+		<film type="hdrfilm">
+			<integer name="width" value="457"/>
+			<integer name="height" value="671"/>
+
+			<rfilter type="gaussian"/>
+		</film>
+	</sensor>
+	
+</scene>

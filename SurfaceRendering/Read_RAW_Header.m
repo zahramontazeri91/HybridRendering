@@ -12,7 +12,7 @@
 % stHeader = Read_RAW_Header(fullFileName_RAW)
 %
 %------------------------------------------------------------------------------
-
+%example: Read_RAW_3DArray('C:/Users/Zahra/Dropbox/Shuang/SurfaceRendering_matlab/gabardine_od_supertile.vol')
 function stHeader = Read_RAW_Header(fullFilename)
 	% Check syntax.  Must have at least one input argument, the full filename. 
 	if (nargin ~= 1)
@@ -61,12 +61,12 @@ function stHeader = Read_RAW_Header(fullFilename)
     stHeader.channels = fread(fileHandleID, 1, '*ubit32');
     
     %Read the bounding box
-    stHeader.xmin = fread(fileHandleID, 1, '*ubit32');
-    stHeader.ymin = fread(fileHandleID, 1, '*ubit32');
-    stHeader.zmin = fread(fileHandleID, 1, '*ubit32');
-    stHeader.xmax = fread(fileHandleID, 1, '*ubit32');
-    stHeader.ymax = fread(fileHandleID, 1, '*ubit32');
-    stHeader.zmax = fread(fileHandleID, 1, '*ubit32');
+    stHeader.xmin = fread(fileHandleID, 1, '*single');
+    stHeader.ymin = fread(fileHandleID, 1, '*single');
+    stHeader.zmin = fread(fileHandleID, 1, '*single');
+    stHeader.xmax = fread(fileHandleID, 1, '*single');
+    stHeader.ymax = fread(fileHandleID, 1, '*single');
+    stHeader.zmax = fread(fileHandleID, 1, '*single');
 
 	% Assign some other useful information.
 	fileInfo = dir(fullFilename); 

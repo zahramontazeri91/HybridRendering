@@ -1,0 +1,12 @@
+clc
+clear
+
+fileID = fopen ('Output/Data/blockID_heightmap.dat', 'w');
+blockID = [0,0,0,0,0];
+fprintf(fileID, '%i\n ', blockID);
+fclose(fileID);
+
+type Output/Data/blockID_heightmap.dat
+
+%%
+% read from file
