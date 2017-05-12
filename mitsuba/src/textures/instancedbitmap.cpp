@@ -504,19 +504,40 @@ public:
 	}
 
 	ref<Bitmap> getBitmap(const Vector2i &/* unused */) const {
-		return m_mipmap1.get() ? m_mipmap1->toBitmap() : m_mipmap3->toBitmap();
+	
+		ref<Bitmap> untiled_bitmap =  m_mipmap1.get() ? m_mipmap1->toBitmap() : m_mipmap3->toBitmap();
+		int width_untiled = untiled_bitmap->getWidth();
+		int height_untiled = untiled_bitmap->getHeight();
+		int tiled_reso_y =  double(m_reso.y)/double(m_divideReso.y) * width_untiled;
+		int tiled_reso_x =  double(m_reso.x)/double(m_divideReso.x) * height_untiled;
+		/* ref<Bitmap> tiled_bitmap = new Bitmap(Bitmap::ELuminance, Bitmap::EUInt16, Vector2i(tiled_reso_x,tiled_reso_y), 1, 0); */
+		ref<Bitmap> tiled_bitmap = new Bitmap(Bitmap::ELuminance, Bitmap::EUInt16, Vector2i(457*4,671*6), 1, 0);
+		
+		int width = tiled_bitmap->getWidth();
+		int height = tiled_bitmap->getHeight();
+		Point2 uv;
+		for (int i=0; i< height-1; i++)
+			for (int j=0; j < width-1; j++) {
+				uv.x = (j+0.5)/width;
+				uv.y = (i+0.5)/height;
+				tiled_bitmap->setPixel(Point2i(j,i), eval(uv, Vector2(0,0), Vector2(0,0) ) );
+			}
+			
+		return tiled_bitmap;		
 	}
 
 	Spectrum eval(const Point2 &uv, const Vector2 &d0, const Vector2 &d1) const {
 		stats::filteredLookups.incrementBase();
 		++stats::filteredLookups;
 
-		///tiling purpose
-/* 		without reading from file
+		///tiling purpose		
+		bool read_from_file = false;
+
+#if (!read_from_file)
 		int tileX = 4;
-		int tileY = 4;
-		int divideX = 2;
-		int divideY = 2;
+		int tileY = 6;
+		int divideX = 1;
+		int divideY = 1;
 
 		Point2 uv_tiled(uv);
 		std::vector<int> m_blockID(tileX*tileY);
@@ -534,11 +555,9 @@ public:
 		int by = std::floor(idx/divideX);
 		
 		uv_tiled.x = double(bx)/double(divideX) + (double(uv.x*tileX)-ix)/double(divideX);
-		uv_tiled.y = double(by)/double(divideY) + (double(uv.y*tileY)-iy)/double(divideY); */
-		
-		
- 		Point2 uv_tiled(uv);	
-		
+		uv_tiled.y = double(by)/double(divideY) + (double(uv.y*tileY)-iy)/double(divideY); 		
+ 			
+#else		
 		double ix = std::floor(uv.x*m_reso.x);
 		double iy = std::floor(uv.y*m_reso.y);
 		int idx = m_blockID[int(iy*m_reso.x + ix)]; 
@@ -546,9 +565,10 @@ public:
 		int bx = idx % m_divideReso.x;
 		int by = std::floor(idx/m_divideReso.x);
 		
+		Point2 uv_tiled(uv);
 		uv_tiled.x = double(bx)/double(m_divideReso.x) + (double(uv.x*m_reso.x)-ix)/double(m_divideReso.x);
 		uv_tiled.y = double(by)/double(m_divideReso.y) + (double(uv.y*m_reso.y)-iy)/double(m_divideReso.y); 
-		
+#endif		
 
 		Spectrum result;
 		if (m_mipmap3.get()) {
@@ -656,10 +676,8 @@ protected:
     Vector2i m_divideReso;
     Vector2i m_reso;
 	std::vector<int> m_blockID;
-	std::string m_blockFile;
-	
+	std::string m_blockFile;	
 	int m_sz;
-	std::vector<int> m_test;
 };
 
 // ================ Hardware shader implementation ================

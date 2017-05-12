@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<scene version="0.5.0">
+	<integrator type="volpath_simple">
+		<integer name="maxDepth" value="-1"/>
+		<integer name="rrDepth" value="100"/>
+	</integrator>
+
+	<shape type="sphere">
+		<point name="center" x="0" y="100" z="250"/>
+		<float name="radius" value="25"/>
+		<emitter type="area">
+			<rgb name="radiance" value="100"/>
+		</emitter>
+	</shape>
+
+ 	<emitter type="constant">
+		<spectrum name="radiance" value="0.1"/>
+	</emitter>
+	
+	<medium type="heterogeneous2" id="med0">
+		<string name="method" value="woodcock"/>
+		<float name="scale" value="3000.0"/>
+
+		<volume type="instancedvol">
+			<string name="densityFile" value="gabardine_od_supertile.vol"/>
+			<string name="orientationFile" value="gabardine_dir_supertile.vol"/>
+			<spectrum name="albedo" value="0.892, 0.063 ,0.048"/>
+			<vector name="blockSize" x="0.1106" y="0.0751" z="0.2303"/>
+			<integer name="divideX" value="6"/>
+			<integer name="divideY" value="6"/>
+			<integer name="tileX" value="400"/>
+			<integer name="tileY" value="600"/>
+			<string name="blockFile" value="gabardine_400x600_tiled2.dat"/>
+		</volume>
+
+		<phase type="microflake">
+			<float name="stddev" value="0.1"/>
+		</phase>
+	</medium>	
+	
+	<shape type="cube">
+		<transform name="toWorld">
+			<translate z="1"/>
+			<scale x="0.5" y="0.5" z="0.5"/>
+			<scale x="0.1106" y="0.0751" z="0.2303"/>
+			<scale x="400" y="600"/>
+		</transform>
+		<ref name="interior" id="med0"/>
+	</shape>
+	
+	<shape type="rectangle">
+		<transform name="toWorld">
+			<scale x="50" y="50"/>
+			<translate z="-0.001"/>
+		</transform>
+		<bsdf type="diffuse">
+			<spectrum name="reflectance" value="0.3"/>
+		</bsdf>
+	</shape>
+	
+	<sensor type="perspective">
+		<transform name="toWorld">
+			<lookat target="0, 0, 0" origin="0, 0, 100" up="0, 1, 0"/>
+		</transform>
+		<float name="fov" value="5"/>
+
+		<sampler type="ldsampler">
+			<integer name="sampleCount" value="16"/>
+		</sampler>
+
+		<film type="hdrfilm">
+			<integer name="width" value="640"/>
+			<integer name="height" value="480"/>
+			<boolean name="banner" value="false"/>
+			<rfilter type="gaussian"/>
+		</film>
+	</sensor>
+</scene>
+

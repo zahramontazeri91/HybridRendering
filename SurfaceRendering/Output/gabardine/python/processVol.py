@@ -4,7 +4,7 @@ import numpy as np
 
 import io, struct, time, sys
 
-fname = '../gabardine_od_supertile.vol'
+fname = 'C:/Users/Zahra/Documents/GitHub/Data/gabardine_od_supertile.vol'
 flipped = True
 prctle = 0.95
 processed = False

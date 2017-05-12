@@ -1,5 +1,7 @@
 Import('env', 'plugins')
 
+plugins += env.SharedLibrary('heightmapbsdf', ['heightmapbsdf.cpp'])
+
 # Basic library of smooth and rough materials
 plugins += env.SharedLibrary('diffuse', ['diffuse.cpp'])
 plugins += env.SharedLibrary('dielectric', ['dielectric.cpp'])

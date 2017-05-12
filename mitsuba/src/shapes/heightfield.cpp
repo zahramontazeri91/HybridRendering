@@ -481,6 +481,7 @@ public:
 				Log(EError, "Attempted to attach multiple textures to a height field shape!");
 
 			m_bitmap = static_cast<Texture *>(child)->getBitmap(m_sizeHint);
+
 		} else if (cClass->derivesFrom(ReconstructionFilter::m_theClass)) {
 			if (m_rfilter != NULL)
 				Log(EError, "Attempted to attach multiple reconstruction filters to a height field shape!");
