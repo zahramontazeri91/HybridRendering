@@ -352,11 +352,15 @@ public:
             {
                 ref<FileStream> fs = new FileStream(m_blockFile, FileStream::EReadOnly);
                 int sz = fs->readInt();
-                if ( sz != m_reso.x*m_reso.y )
-                    Log(EError, "Block information size mismatch: expected %d but got %d", m_reso.x*m_reso.y, sz);
-
-                m_blockID.resize(sz);
-                fs->readIntArray(&m_blockID[0], sz);
+				m_blockID.assign(m_reso.x*m_reso.y,0);
+				for (int i=0; i<m_reso.y; i++) {
+					for (int j=0; j<m_reso.x; j++) {
+						m_blockID.at(i*m_reso.x + j) = fs->readInt();
+					}
+					if (i != m_reso.y-1)
+						for (int k=m_reso.x; k<400; k++) 
+							fs->readInt();
+				} 
             }
 
             for ( int i = 0; i < m_reso.x*m_reso.y; ++i )

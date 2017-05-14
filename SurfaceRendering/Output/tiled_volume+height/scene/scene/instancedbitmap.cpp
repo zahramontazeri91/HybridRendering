@@ -31,6 +31,139 @@
 
 MTS_NAMESPACE_BEGIN
 
+/*!\plugin{bitmap}{Bitmap texture}
+ * \order{1}
+ * \parameters{
+ *     \parameter{filename}{\String}{
+ *       Filename of the bitmap to be loaded
+ *     }
+ *     \parameter{wrapMode, wrapModeU, wrapModeV}{\String}{
+ *       Behavior of texture lookups outside of the $[0,1]$ $uv$ range.\vspace{-1mm}
+ *       \begin{enumerate}[(i)]
+ *           \item \code{repeat}: Repeat the texture indefinitely\vspace{-1mm}
+ *           \item \code{mirror}: Mirror the texture along its boundaries\vspace{-1mm}
+ *           \item \code{clamp}: Clamp $uv$ coordinates to $[0,1]$ before a lookup\vspace{-1mm}
+ *           \item \code{zero}: Switch to a zero-valued texture \vspace{-1mm}
+ *           \item \code{one}: Switch to a one-valued texture \vspace{-1mm}
+ *       \end{enumerate}
+ *       Default: \code{repeat}. The parameter \code{wrapMode} is a shortcut for
+ *       setting both \code{wrapModeU} and \code{wrapModeV} at the same time.
+ *     }
+ *     \parameter{gamma}{\Float}{
+ *       Optional parameter to override the gamma value of the source bitmap,
+ *       where 1 indicates a linear color space and the special value -1
+ *       corresponds to sRGB. \default{automatically detect based on the
+ *       image type and metadata}
+ *     }
+ *     \parameter{filterType}{\String}{
+ *       Specifies the texture filturing that should be used for lookups\vspace{-1mm}
+ *       \begin{enumerate}[(i)]
+ *           \item \code{ewa}: Elliptically weighted average (a.k.a.
+ *           anisotropic filtering). This produces the best quality\vspace{-1mm}
+ *           \item \code{trilinear}: Simple trilinear (isotropic) filtering.\vspace{-1mm}
+ *           \item \code{nearest}: No filtering, do nearest neighbor lookups.\vspace{-1mm}
+ *       \end{enumerate}
+ *       Default: \code{ewa}.
+ *     }
+ *     \parameter{maxAnisotropy}{\Float}{
+ *        Specific to \code{ewa} filtering, this parameter limits the
+ *        anisotropy (and thus the computational cost) of filtured texture lookups. The
+ *        default of 20 is a good compromise.
+ *     }
+ *     \parameter{cache}{\Boolean}{
+ *        Preserve generated MIP map data in a cache file? This will cause a file named
+ *        \emph{filename}\code{.mip} to be created.
+ *        \default{automatic---use caching for textures larger than 1M pixels.}
+ *     }
+ *     \parameter{uoffset, voffset}{\Float}{
+ *       Numerical offset that should be applied to UV lookups
+ *     }
+ *     \parameter{uscale, vscale}{\Float}{
+ *       Multiplicative factors that should be applied to UV lookups
+ *     }
+ *     \parameter{channel}{\String}{
+ *       Create a monochromatic texture based on one of the image channels
+ *       (e.g. \texttt{r}, \texttt{g}, \texttt{b}, \texttt{a}, \texttt{x},
+ *       \texttt{y}, \texttt{z} etc.). \default{use all channels}
+ *     }
+ * }
+ * This plugin provides a bitmap-backed texture source that supports \emph{filtered}
+ * texture lookups on\footnote{Some of these may not be available depending on how
+ * Mitsuba was compiled.} JPEG, PNG, OpenEXR, RGBE, TGA, and BMP files. Filtered
+ * lookups are useful to avoid aliasing when rendering textures that contain high
+ * frequencies (see the next page for an example).
+ *
+ * The plugin operates as follows: when loading a bitmap file, it is first converted
+ * into a linear color space. Following this, a MIP map is constructed that is necessary
+ * to perform filtered lookups during rendering. A \emph{MIP map} is a hierarchy of
+ * progressively lower resolution versions of the input image, where the resolution of
+ * adjacent levels differs by a factor of two. Mitsuba creates this hierarchy using
+ * Lanczos resampling to obtain very high quality results.
+ * Note that textures may have an arbitrary resolution and are not limited to powers of two.
+ * Three different filtering modes are supported:
+ *
+ * \begin{enumerate}[(i)]
+ * \item Nearest neighbor lookups effectively disable filtering and always query the
+ * highest-resolution version of the texture without any kind of interpolation. This is
+ * fast and requires little memory (no MIP map is created), but results in visible aliasing.
+ * Only a single pixel value is accessed.
+ *
+ * \item The trilinear filter performs bilinear interpolation on two adjacent MIP levels
+ * and blends the results. Because it cannot do anisotropic (i.e. slanted) lookups in texture space,
+ * it must compromise either on the side of blurring or aliasing. The implementation in Mitsuba
+ * chooses blurring over aliasing (though note that (\textbf{b}) is an extreme case).
+ * Only 8 pixel values are accessed.
+ *
+ * \item The EWA filter performs anisotropicically filtered lookups on two adjacent MIP map levels
+ * and blends them. This produces the best quality, but at the expense of computation time.
+ * Generally, 20-40 pixel values must be read for a single EWA texture lookup. To limit
+ * the number of pixel accesses, the \code{maxAnisotropy} parameter can be used to bound
+ * the amount of anisotropy that a texture lookup is allowed to have.
+ * \end{enumerate}
+ * \renderings{
+ *     \rendering{Nearest-neighbor filter. Note the aliasing}{tex_bitmap_nearest}
+ *     \rendering{Trilinear filter. Note the blurring}{tex_bitmap_trilinear}
+ *     \vspace{-5mm}
+ * }
+ * \renderings{
+ *     \setcounter{subfigure}{2}
+ *     \rendering{EWA filter}{tex_bitmap_ewa}
+ *     \rendering{Ground truth (512 samples per pixel)}{tex_bitmap_gt}
+ *     \caption{A somewhat contrived comparison of the different filters when rendering a high-frequency
+ *     checkerboard pattern using four samples per pixel. The EWA method (the default)
+ *     pre-filters the texture anisotropically to limit blurring and aliasing, but has a
+ *     higher computational cost than the other filters.}
+ * }
+ * \paragraph{Caching and memory requirements:}
+ * When a texture is read, Mitsuba internally converts it into an uncompressed linear format
+ * using a half precision (\code{float16})-based representation. This is convenient for
+ * rendering but means that textures require copious amounts of memory (in particular, the
+ * size of the occupied memory region might be orders of magnitude greater than that of the
+ * original input file).
+ *
+ * For instance, a basic 10 megapixel image requires as much as 76 MiB of memory! Loading,
+ * color space transformation, and MIP map construction require up to several seconds in this case.
+ * To reduce these overheads, Mitsuba 0.4.0 introduced MIP map caches. When a large
+ * texture is loaded for the first time, a MIP map cache file with the name \emph{filename}\code{.mip}
+ * is generated. This is essentially a verbatim copy of the in-memory representation created
+ * during normal rendering. Storing this information as a separate file has two advantages:
+ *
+ * \begin{enumerate}[(i)]
+ *    \item MIP maps do not have to be regenerated in subsequent Mitsuba runs,
+ *     which substantially reduces scene loading times.
+ *    \item Because the texture storage is entirely disk-backed and can be \emph{memory-mapped},
+ *    Mitsuba is able to work with truly massive textures that would otherwise exhaust the main system memory.
+ * \end{enumerate}
+ *
+ * The texture caches are automatically regenerated when the input texture is modified.
+ * Of course, the cache files can be cumbersome when they are not needed anymore. On Linux
+ * or Mac OS, they can safely be deleted by executing the following command within a scene directory.
+ *
+ * \begin{shell}
+ * $\code{\$}$ find . -name "*.mip" -delete
+ * \end{shell}
+ */
+
 class InstanceBitmapTexture : public Texture2D {
 public:
 	/* Store texture data using half precision, but perform computations in
@@ -177,7 +310,8 @@ public:
 		bool constructBlockID = 1;
 		
 #if 0
-		std::cout<<"@@@@@@@ constructing the dat file ... @@@@@@@ " <<std::endl;		
+		std::cout<<"@@@@@@@ constructing the dat file ... @@@@@@@ " <<std::endl;
+		
 		fs->flush();
   		fs->writeInt(m_reso.x*m_reso.y);
   		for (int j=0; j<m_reso.y; j++)
@@ -188,13 +322,8 @@ public:
 #else		
  		m_sz = fs->readInt();
 		m_blockID.assign(m_reso.x*m_reso.y,0);
-		for (int i=0; i<m_reso.y; i++) {
-			for (int j=0; j<m_reso.x; j++) {
-				m_blockID.at(i*m_reso.x + j) = fs->readInt();
-			}
-			if (i != m_reso.y-1)
-				for (int k=m_reso.x; k<400; k++) 
-					fs->readInt();
+		for (int i=0; i<m_sz-1; i++) {
+			m_blockID.at(i) = fs->readInt();
 		} 
 #endif		
 	}
@@ -382,18 +511,18 @@ public:
 		ref<Bitmap> untiled_bitmap =  m_mipmap1.get() ? m_mipmap1->toBitmap() : m_mipmap3->toBitmap();
 		int width_untiled = untiled_bitmap->getWidth();
 		int height_untiled = untiled_bitmap->getHeight();
-	int tiled_reso_y = (m_reso.y  * width_untiled ) / m_divideReso.y ;
-		int tiled_reso_x = (m_reso.x  * height_untiled ) / m_divideReso.x;
+		int tiled_reso_y =  double(m_reso.y)/double(m_divideReso.y) * width_untiled;
+		int tiled_reso_x =  double(m_reso.x)/double(m_divideReso.x) * height_untiled;
 		ref<Bitmap> tiled_bitmap = new Bitmap(Bitmap::ELuminance, Bitmap::EUInt16, Vector2i(tiled_reso_x,tiled_reso_y), 1, 0); 
-		//ref<Bitmap> tiled_bitmap = new Bitmap(Bitmap::ELuminance, Bitmap::EUInt16, Vector2i((457*4)/6,(671*6)/6), 1, 0);
+		//ref<Bitmap> tiled_bitmap = new Bitmap(Bitmap::ELuminance, Bitmap::EUInt16, Vector2i(457*4,671*6), 1, 0);
 		
 		int width = tiled_bitmap->getWidth();
 		int height = tiled_bitmap->getHeight();
 		Point2 uv;
 		for (int i=0; i< height-1; i++)
 			for (int j=0; j < width-1; j++) {
-				uv.x = (j+0.5f)/width;
-				uv.y = (i+0.5f)/height;
+				uv.x = (j+0.5)/width;
+				uv.y = (i+0.5)/height;
 				tiled_bitmap->setPixel(Point2i(j,i), eval(uv, Vector2(0,0), Vector2(0,0) ) );
 			}
 			
@@ -405,14 +534,13 @@ public:
 		++stats::filteredLookups;
 
 		///tiling purpose		
-		bool read_from_file = false;
+		bool read_from_file = true;
 
 #if 0
-		std::cout<< "@@@ not reading from input@@@" <<std::endl;
 		int tileX = 4;
 		int tileY = 6;
-		int divideX = 6;
-		int divideY = 6;
+		int divideX = 1;
+		int divideY = 1;
 
 		Point2 uv_tiled(uv);
 		std::vector<int> m_blockID(tileX*tileY);
@@ -422,27 +550,27 @@ public:
 				m_blockID.at(j*tileX + i) = ( (j%divideY)*divideX + i%divideX );
 	
 		
-		float ix = std::floor(uv.x*tileX);
-		float iy = std::floor(uv.y*tileY);
+		double ix = std::floor(uv.x*tileX);
+		double iy = std::floor(uv.y*tileY);
 		int idx = m_blockID[int(iy*tileX + ix)]; 
 
 		int bx = idx % divideX;
 		int by = std::floor(idx/divideX);
 		
-		uv_tiled.x = float(bx)/float(divideX) + (float(uv.x*tileX)-ix)/float(divideX);
-		uv_tiled.y = float(by)/float(divideY) + (float(uv.y*tileY)-iy)/float(divideY); 		
+		uv_tiled.x = double(bx)/double(divideX) + (double(uv.x*tileX)-ix)/double(divideX);
+		uv_tiled.y = double(by)/double(divideY) + (double(uv.y*tileY)-iy)/double(divideY); 		
  			
 #else		
-		float ix = std::floor(uv.x*m_reso.x);
-		float iy = std::floor(uv.y*m_reso.y);
+		double ix = std::floor(uv.x*m_reso.x);
+		double iy = std::floor(uv.y*m_reso.y);
 		int idx = m_blockID[int(iy*m_reso.x + ix)]; 
 
 		int bx = idx % m_divideReso.x;
 		int by = std::floor(idx/m_divideReso.x);
 		
 		Point2 uv_tiled(uv);
-		uv_tiled.x = float(bx)/float(m_divideReso.x) + (float(uv.x*m_reso.x)-ix)/float(m_divideReso.x);
-		uv_tiled.y = float(by)/float(m_divideReso.y) + (float(uv.y*m_reso.y)-iy)/float(m_divideReso.y); 
+		uv_tiled.x = double(bx)/double(m_divideReso.x) + (double(uv.x*m_reso.x)-ix)/double(m_divideReso.x);
+		uv_tiled.y = double(by)/double(m_divideReso.y) + (double(uv.y*m_reso.y)-iy)/double(m_divideReso.y); 
 #endif		
 
 		Spectrum result;
