@@ -51,7 +51,6 @@
 		<volume name="albedo" type="constvolume">
 			<spectrum name="value" value="0.892 0.063 0.048"/>
 		</volume>
-		
 
 		<phase type="microflake">
 			<float name="stddev" value="0.1"/>

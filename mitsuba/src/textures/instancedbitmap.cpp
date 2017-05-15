@@ -330,20 +330,61 @@ public:
 		/* There are no ray differentials to do any kind of
 		   prefiltering. Evaluate the full-resolution texture */
 
+				///tiling purpose		
+		bool read_from_file = false;
+
+#if 0
+		std::cout<< "@@@ not reading from input@@@" <<std::endl;
+		int tileX = 4;
+		int tileY = 6;
+		int divideX = 6;
+		int divideY = 6;
+
+		Point2 uv_tiled(uv);
+		std::vector<int> m_blockID(tileX*tileY);
+		m_blockID.assign(tileX*tileY,0);
+  		for (int j=0; j<tileY; j++)
+			for (int i=0; i<tileX; i++) 
+				m_blockID.at(j*tileX + i) = ( (j%divideY)*divideX + i%divideX );
+	
+		
+		float ix = std::floor(uv.x*tileX);
+		float iy = std::floor(uv.y*tileY);
+		int idx = m_blockID[int(iy*tileX + ix)]; 
+
+		int bx = idx % divideX;
+		int by = std::floor(idx/divideX);
+		
+		uv_tiled.x = float(bx)/float(divideX) + (float(uv.x*tileX)-ix)/float(divideX);
+		uv_tiled.y = float(by)/float(divideY) + (float(uv.y*tileY)-iy)/float(divideY); 		
+ 			
+#else		
+		float ix = std::floor(uv.x*m_reso.x);
+		float iy = std::floor(uv.y*m_reso.y);
+		int idx = m_blockID[int(iy*m_reso.x + ix)]; 
+
+		int bx = idx % m_divideReso.x;
+		int by = std::floor(idx/m_divideReso.x);
+		
+		Point2 uv_tiled(uv);
+		uv_tiled.x = float(bx)/float(m_divideReso.x) + (float(uv.x*m_reso.x)-ix)/float(m_divideReso.x);
+		uv_tiled.y = float(by)/float(m_divideReso.y) + (float(uv.y*m_reso.y)-iy)/float(m_divideReso.y); 
+#endif	
+
 		Spectrum result;
 		if (m_mipmap3.get()) {
 			Color3 value;
 			if (m_mipmap3->getFilterType() != ENearest)
-				value = m_mipmap3->evalBilinear(0, uv);
+				value = m_mipmap3->evalBilinear(0, uv_tiled);
 			else
-				value = m_mipmap3->evalBox(0, uv);
+				value = m_mipmap3->evalBox(0, uv_tiled);
 			result.fromLinearRGB(value[0], value[1], value[2]);
 		} else {
 			Color1 value;
 			if (m_mipmap1->getFilterType() != ENearest)
-				value = m_mipmap1->evalBilinear(0, uv);
+				value = m_mipmap1->evalBilinear(0, uv_tiled);
 			else
-				value = m_mipmap1->evalBox(0, uv);
+				value = m_mipmap1->evalBox(0, uv_tiled);
 			result = Spectrum(value[0]);
 		}
 		stats::filteredLookups.incrementBase();
@@ -354,7 +395,6 @@ public:
 	void evalGradient(const Point2 &uv, Spectrum *gradient) const {
 		/* There are no ray differentials to do any kind of
 		   prefiltering. Evaluate the full-resolution texture */
-
 		if (m_mipmap3.get()) {
 			Color3 result[2];
 			if (m_mipmap3->getFilterType() != ENearest) {

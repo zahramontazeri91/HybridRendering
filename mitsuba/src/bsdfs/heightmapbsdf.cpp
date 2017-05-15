@@ -150,6 +150,12 @@ public:
 
 		//Vector t = normalize(Vector(tangent[0], tangent[1], tangent[2]));
 		Vector t = normalize(Vector(tangent[0] * 2 - 1, tangent[1] * 2 - 1, tangent[2] * 2 - 1));
+#if 0
+        Spectrum ret;
+        ret.fromLinearRGB(std::abs(t.x), std::abs(t.y), std::abs(t.z));
+        return ret/M_PI;
+#else
+
 		Vector n = normalize(bRec.its.shFrame.n);
 
 		Vector s = normalize(cross(t, n));
@@ -176,7 +182,8 @@ public:
 
 		//return F *(INV_PI * Frame::cosTheta(bRec.wo));
 		return cos_item * 1.0 * F;// *(Frame::cosTheta(bRec.wo));
-	}
+#endif
+		}
 
 	Float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const {
 		if (!(bRec.typeMask & EDiffuseReflection) || measure != ESolidAngle

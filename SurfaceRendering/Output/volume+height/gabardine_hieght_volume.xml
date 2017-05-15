@@ -75,9 +75,7 @@
 	<shape type="heightfield">
 		<string name="filename" value="heightmap.exr"/>
 		<transform name="toWorld">
-			<translate z="1"/>
 			<scale x="0.3315" y="0.2258" z="0.0232"/>
-			<translate z="0.1838"/>
 		</transform>
 		
 		<bsdf type="heightmapbsdf">
@@ -103,14 +101,14 @@
 
 	<sensor type="perspective">
 		<transform name="toWorld">
-			<lookat target="0, 0, 0" origin="0, 7, 7" up="0, 0, 1"/>
-			<!-- Top View 
-			<lookat target="0, 0, 0" origin="0, 0, 10" up="0, 1, 0"/>  -->
+			<!-- <lookat target="0, 0, 0" origin="0, 7, 7" up="0, 0, 1"/> -->
+			<!-- Top View --> 
+			<lookat target="0, 0, 0" origin="0, 0, 10" up="0, 1, 0"/> 
 		</transform>
 		<float name="fov" value="5"/>
 
 		<sampler type="ldsampler">
-			<integer name="sampleCount" value="64"/>
+			<integer name="sampleCount" value="16"/>
 		</sampler>
 
 		<film type="hdrfilm">

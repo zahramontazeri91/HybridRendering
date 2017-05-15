@@ -1,0 +1,17 @@
+<!-- Transform for the volume -->
+<transform name="toWorld">
+    <translate x="0.0259" y="0.0113" z="0.1203"/>
+</transform>
+
+<!-- Transform for the bounding cube -->
+<transform name="toWorld">
+    <translate z="1"/>
+    <scale x="0.3315" y="0.2258" z="0.0257"/>
+    <translate z="0.1789"/>
+</transform>
+
+<!-- Transform for the height map -->
+<transform name="toWorld">
+    <scale x="0.3315" y="0.2258"/>
+</transform>
+

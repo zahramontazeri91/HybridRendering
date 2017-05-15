@@ -28,9 +28,8 @@
 		<spectrum name="irradiance" value="1 1 1"/>
 	</emitter>
 	
-	<shape type="instancedheightfield">
-		<!-- <string name="filename" value="mHeightMap_Surface.pfm"/> -->
-		<string name="filename" value="heightmap0.exr"/>
+	<shape type="heightfield">
+		<string name="filename" value="HeightMap_front.pfm"/>
 		<float name="scale" value="0.33"/>
 		<transform name="toWorld">
 			<scale x="0.330" y="0.225" z="0.169"/>
@@ -39,7 +38,7 @@
 		
 		<bsdf type="heightmapbsdf">
 			<rgb name="reflectance" value="0.892 0.063 0.048"/>
-			<texture type="instancedbitmap" name="tangentMap">
+			<texture type="bitmap" name="tangentMap">
 				<string name="filename" value="TangentMap.jpg"/>
 				<float name="gamma" value="1"/>
 			</texture>

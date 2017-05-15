@@ -11,12 +11,12 @@
 		<string name="filterType" value="nearest"/>
 		<integer name="divideX" value="1"/>
 		<integer name="divideY" value="1"/>
-		<integer name="tileX" value="40"/>
-		<integer name="tileY" value="60"/>
-		<string name="blockFile" value="C:/Users/Zahra/Documents/GitHub/SurfaceRendering/SurfaceRendering/Output/Data/blockID_heightmap.dat"/> 
+		<integer name="tileX" value="4"/>
+		<integer name="tileY" value="6"/>
+		<string name="blockFile" value="C:\Users\Zahra\Documents\GitHub\SurfaceRendering\SurfaceRendering\Output\Data\gabardine_400x600_tiled2.dat"/> 
 	</texture>
 	
-	<bsdf type="diffuse" id="myMaterial">
+	<bsdf type="heightmapbsdf" id="myMaterial">
 	<ref name="reflectance" id="myImage"/>
 	</bsdf>
 	
@@ -34,13 +34,13 @@
         <texture type="scale">
           <float name="scale" value="0.0010"/>
 			<texture type="instancedbitmap">
-				<string name="filename" value="../../input/height_flipped.exr"/>
+				<string name="filename" value="heightmap.exr"/>
 				<string name="filterType" value="nearest"/>
 				<integer name="divideX" value="1"/>
 				<integer name="divideY" value="1"/>
-				<integer name="tileX" value="40"/>
-				<integer name="tileY" value="60"/>
-				<string name="blockFile" value="C:/Users/Zahra/Documents/GitHub/SurfaceRendering/SurfaceRendering/Output/Data/blockID_heightmap.dat"/>
+				<integer name="tileX" value="4"/>
+				<integer name="tileY" value="6"/>
+				<string name="blockFile" value="C:\Users\Zahra\Documents\GitHub\SurfaceRendering\SurfaceRendering\Output\Data\gabardine_400x600_tiled2.dat"/>
             </texture>
         </texture>
 		<transform name="toWorld">
