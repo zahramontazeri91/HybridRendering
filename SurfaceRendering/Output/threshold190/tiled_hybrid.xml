@@ -1,0 +1,159 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!--
+
+	Automatically converted from Wavefront OBJ
+
+-->
+
+<scene version="0.5.0">
+	<integrator type="volpath">
+		<integer name="maxDepth" value="-1"/>
+	</integrator>
+
+	<!--
+ 	<emitter type="constant">
+		<spectrum name="radiance" value="0.75"/>
+	</emitter>
+	-->
+	<emitter type="directional">
+		<spectrum name="irradiance" value="4"/>
+		<vector name="direction" x="0" y="0" z="-1"/>
+	</emitter>
+		
+		
+	<medium type="heterogeneous" id="med0">
+		
+		<float name="scale" value="3000"/>	
+		<string name="method" value="woodcock"/>
+		
+		<volume name="density" type="instancedvol">
+			<string name="densityFile" value="../../../../Data/gabardine_od_supertile.vol"/>
+			<string name="orientationFile" value="../../../../Data/gabardine_dir_supertile.vol"/>
+			<spectrum name="albedo" value="0.892, 0.063 ,0.048"/>
+			<vector name="blockSize" x="0.1106" y="0.0751" z="0.2303"/>
+			<integer name="divideX" value="6"/>
+			<integer name="divideY" value="6"/>
+			<integer name="tileX" value="300"/>
+			<integer name="tileY" value="450"/>
+			<string name="blockFile" value="E:\zahra\Data\gabardine_400x600_tiled2.dat"/>
+			<transform name="toWorld">
+				<translate x="0.0259" y="0.0113" z="0.1203"/>
+			</transform>
+		</volume>
+		
+  		<volume name="orientation" type="instancedvol">
+			<string name="densityFile" value="../../../../Data/gabardine_od_supertile.vol"/>
+			<string name="orientationFile" value="../../../../Data/gabardine_dir_supertile.vol"/>
+			<spectrum name="albedo" value="0.892, 0.063 ,0.048"/>
+			<vector name="blockSize" x="0.1106" y="0.0751" z="0.2303"/>
+			<integer name="divideX" value="6"/>
+			<integer name="divideY" value="6"/>
+			<integer name="tileX" value="300"/>
+			<integer name="tileY" value="450"/>
+			<string name="blockFile" value="E:\zahra\Data\gabardine_400x600_tiled2.dat"/>
+			<transform name="toWorld">
+				<translate x="0.0259" y="0.0113" z="0.1203"/>
+			</transform>		
+		</volume> 
+				
+		<volume name="albedo" type="constvolume">
+			<spectrum name="value" value="0.892 0.063 0.048"/>
+		</volume>
+		
+
+		<phase type="microflake">
+			<float name="stddev" value="0.1"/>
+		</phase>
+		
+	</medium>
+	 
+	
+	<!-- Volume (full, for reference) -->
+
+<!-- 	<shape type="cube">
+		<transform name="toWorld">
+			<translate z="1"/>
+			<scale x="0.3315" y="0.2258" z="0.11515"/>
+			<scale x="6.667" y="10"/>
+		</transform>
+		<ref name="interior" id="med0"/>
+	</shape> -->
+	
+
+ 	<shape type="cube">
+		<transform name="toWorld">
+		    <translate z="1"/>
+		    <scale x="0.3315" y="0.2258" z="0.0208"/>
+		    <translate z="0.1887"/>
+			<scale x="50" y="75"/>
+		</transform>
+		<ref name="interior" id="med0"/>
+	</shape>
+
+	<texture type="instancedbitmap" id="myImage">
+		<string name="filename" value="../Data/TangentMap.jpg"/>
+		<float name="gamma" value="1"/>
+		<string name="filterType" value="nearest"/>
+		<integer name="divideX" value="6"/>
+		<integer name="divideY" value="6"/>
+		<integer name="tileX" value="300"/>
+		<integer name="tileY" value="450"/>
+		<string name="blockFile" value="E:\zahra\Data\gabardine_400x600_tiled2.dat"/> 
+	</texture>
+	
+	<bsdf type="heightmapbsdf" id="myMaterial">
+			<ref name="tangentMap" id="myImage"/>
+			<spectrum name="Kd" value="0.0561,0.0002,0.0001"/>
+			<spectrum name="Ks" value="0.1767,0.0018,0.0013"/>
+			<spectrum name="Beta" value="0.2474 0.2146 0.2143"/>
+	</bsdf> 
+		
+  	<shape type="heightfield">
+		<transform name="toWorld">
+			<scale x="50" y="75"/>
+		</transform>
+        <texture type="scale">
+			<texture type="instancedbitmap">
+				<string name="filename" value="heightmap.exr"/>
+				<float name="gamma" value="1"/>
+				<string name="filterType" value="nearest"/>
+				<integer name="divideX" value="6"/>
+				<integer name="divideY" value="6"/>
+				<integer name="tileX" value="300"/>
+				<integer name="tileY" value="450"/>
+				<string name="blockFile" value="E:\zahra\Data\gabardine_400x600_tiled2.dat"/>
+			</texture>
+		</texture>				
+		<ref id="myMaterial"/>
+	</shape> 
+	
+	<shape type="rectangle">
+		<transform name="toWorld">
+			<scale x="20" y="20"/>
+			<translate z="-0.01"/>
+		</transform>
+		<bsdf type="diffuse">
+			<spectrum name="reflectance" value="0.3"/>
+		</bsdf>
+	</shape>
+
+	<sensor type="perspective">
+		<transform name="toWorld">
+			<!-- <lookat target="0, 0, 0" origin="0, 7, 7" up="0, 0, 1"/> -->
+			<!-- Top View -->
+			<lookat target="0, 0, 0" origin="0, 0, 1000" up="0, 1, 0"/>
+		</transform>
+		<float name="fov" value="5"/>
+
+		<sampler type="ldsampler">
+			<integer name="sampleCount" value="16"/>
+		</sampler>
+
+		<film type="hdrfilm">
+			<integer name="width" value="640"/>
+			<integer name="height" value="480"/>
+			<boolean name="banner" value="false"/>
+			<rfilter type="gaussian"/>
+		</film>
+	</sensor>
+</scene>

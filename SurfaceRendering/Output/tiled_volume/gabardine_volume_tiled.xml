@@ -31,8 +31,8 @@
 			<vector name="blockSize" x="0.1106" y="0.0751" z="0.2303"/>
 			<integer name="divideX" value="6"/>
 			<integer name="divideY" value="6"/>
-			<integer name="tileX" value="400"/>
-			<integer name="tileY" value="600"/>
+			<integer name="tileX" value="200"/>
+			<integer name="tileY" value="300"/>
 			<string name="blockFile" value="C:\Users\Zahra\Documents\GitHub\SurfaceRendering\SurfaceRendering\Output\Data\gabardine_400x600_tiled2.dat"/>
 		</volume>
 		
@@ -43,8 +43,8 @@
 			<vector name="blockSize" x="0.1106" y="0.0751" z="0.2303"/>
 			<integer name="divideX" value="6"/>
 			<integer name="divideY" value="6"/>
-			<integer name="tileX" value="400"/>
-			<integer name="tileY" value="600"/>
+			<integer name="tileX" value="200"/>
+			<integer name="tileY" value="300"/>
 			<string name="blockFile" value="C:\Users\Zahra\Documents\GitHub\SurfaceRendering\SurfaceRendering\Output\Data\gabardine_400x600_tiled2.dat"/>
 		</volume> 
 				
@@ -64,14 +64,14 @@
 			<translate z="1"/>
 			<scale x="0.5" y="0.5" z="0.5"/>
 			<scale x="0.1106" y="0.0751" z="0.2303"/>
-			<scale x="400" y="600"/>
+			<scale x="200" y="300"/>
 		</transform>
 		<ref name="interior" id="med0"/>
 	</shape>
 	
 	<shape type="rectangle">
 		<transform name="toWorld">
-			<scale x="50" y="50"/>
+			<scale x="100" y="100"/>
 			<translate z="-0.001"/>
 		</transform>
 		<bsdf type="diffuse">
