@@ -330,7 +330,7 @@ public:
 		/* There are no ray differentials to do any kind of
 		   prefiltering. Evaluate the full-resolution texture */
 
-				///tiling purpose		
+		///tiling purpose		
 		bool read_from_file = false;
 
 #if 0
@@ -424,8 +424,8 @@ public:
 		int height_untiled = untiled_bitmap->getHeight();
 	int tiled_reso_y = (m_reso.y  * width_untiled ) / m_divideReso.y ;
 		int tiled_reso_x = (m_reso.x  * height_untiled ) / m_divideReso.x;
-		ref<Bitmap> tiled_bitmap = new Bitmap(Bitmap::ELuminance, Bitmap::EUInt16, Vector2i(tiled_reso_x,tiled_reso_y), 1, 0); 
-		//ref<Bitmap> tiled_bitmap = new Bitmap(Bitmap::ELuminance, Bitmap::EUInt16, Vector2i((457*4)/6,(671*6)/6), 1, 0);
+		ref<Bitmap> tiled_bitmap = new Bitmap(Bitmap::ELuminance, Bitmap::EFloat16, Vector2i(tiled_reso_x,tiled_reso_y), 1, 0); 
+		//ref<Bitmap> tiled_bitmap = new Bitmap(Bitmap::ELuminance, Bitmap::EFloat16, Vector2i((457*4)/6,(671*6)/6), 1, 0);
 		
 		int width = tiled_bitmap->getWidth();
 		int height = tiled_bitmap->getHeight();
