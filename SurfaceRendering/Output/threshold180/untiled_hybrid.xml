@@ -52,26 +52,33 @@
 	</medium>
 	
 	<!-- Volume (full, for reference) -->
-<!-- 	<shape type="cube">
+<!--  	<shape type="cube">
 		<transform name="toWorld">
 			<translate z="1"/>
 			<scale x="0.3315" y="0.2258" z="0.11515"/>
 		</transform>
 		<ref name="interior" id="med0"/>
 	</shape> -->
-
+	<!-- Volume (bottom only, for compare with heightmap-only) -->
+ 	<shape type="cube">
+		<transform name="toWorld">
+			<translate z="1"/>
+			<scale x="0.3315" y="0.2258" z="0.08945"/>
+		</transform>
+		<ref name="interior" id="med0"/>
+	</shape>
 
 	<!-- Volume (top only, for hybrid) -->
-<!--  	<shape type="cube">
+<!--   	<shape type="cube">
 		<transform name="toWorld">
 	    <translate z="1"/>
 	    <scale x="0.3315" y="0.2258" z="0.0257"/>
 	    <translate z="0.1789"/>
 		</transform>
 		<ref name="interior" id="med0"/>
-	</shape> -->
+	</shape>
 	
-	<shape type="heightfield">
+ 	<shape type="heightfield">
 		<string name="filename" value="heightmap.exr"/>
 		<transform name="toWorld">
 			<scale x="0.3315" y="0.2258"/>
@@ -79,14 +86,14 @@
 		
 		<bsdf type="heightmapbsdf">
 			<texture type="bitmap" name="tangentMap">
-				<string name="filename" value="../Data/TangentMap.jpg"/>
+				<string name="filename" value="../../../../Data/TangentMap.jpg"/>
 				<float name="gamma" value="1"/>
 			</texture>
 			<spectrum name="Kd" value="0.0561,0.0002,0.0001"/>
 			<spectrum name="Ks" value="0.1767,0.0018,0.0013"/>
 			<spectrum name="Beta" value="0.2474 0.2146 0.2143"/>
 		</bsdf>
-	</shape> 
+	</shape>  -->
 	
 	<shape type="rectangle">
 		<transform name="toWorld">
@@ -102,8 +109,8 @@
 		<transform name="toWorld">
 			<!-- <lookat target="0, 0, 0" origin="$x" up="0, 0, 1"/> -->
 			<!-- Top View --> 
-			<lookat target="0, 0, 0" origin="0, 0, 10" up="0, 1, 0"/>
-			<rotate x="1" angle = "$x"/>
+			<lookat target="0, 0.05, 0" origin="0, 0, 10" up="0, 1, 0"/>
+			<rotate x="1" angle = "45"/>
 		</transform>
 		<float name="fov" value="5"/>
 
