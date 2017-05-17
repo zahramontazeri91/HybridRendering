@@ -33,12 +33,12 @@
 			<vector name="blockSize" x="0.1106" y="0.0751" z="0.2303"/>
 			<integer name="divideX" value="6"/>
 			<integer name="divideY" value="6"/>
-			<integer name="tileX" value="6"/>
-			<integer name="tileY" value="6"/>
+			<integer name="tileX" value="200"/>
+			<integer name="tileY" value="300"/>
 			<string name="blockFile" value="C:\Users\Zahra\Documents\GitHub\Data\gabardine_400x600_tiled2.dat"/>
-			<transform name="toWorld">
-				<translate z="0.1203"/>
-			</transform>
+ 			<transform name="toWorld">
+				<translate z="0.11515"/>
+			</transform> 
 		</volume>
 		
   		<volume name="orientation" type="instancedvol">
@@ -48,12 +48,12 @@
 			<vector name="blockSize" x="0.1106" y="0.0751" z="0.2303"/>
 			<integer name="divideX" value="6"/>
 			<integer name="divideY" value="6"/>
-			<integer name="tileX" value="6"/>
-			<integer name="tileY" value="6"/>
+			<integer name="tileX" value="200"/>
+			<integer name="tileY" value="300"/>
 			<string name="blockFile" value="C:\Users\Zahra\Documents\GitHub\Data\gabardine_400x600_tiled2.dat"/>
-			<transform name="toWorld">
-				<translate z="0.12545"/>
-			</transform>			
+ 			<transform name="toWorld">
+				<translate z="0.11515"/>
+			</transform> 			
 		</volume> 
 				
 		<volume name="albedo" type="constvolume">
@@ -69,21 +69,22 @@
 	 
 	
 	<!-- Volume (full, for reference) -->
-<!--  	<shape type="cube">
+<!--   	<shape type="cube">
 		<transform name="toWorld">
 			<translate z="1"/>
 			<scale x="0.3315" y="0.2258" z="0.11515"/>
 			<scale x="6.667" y="10"/>
 		</transform>
 		<ref name="interior" id="med0"/>
-	</shape> --> 
+	</shape> -->  
 	
 
-   	<shape type="cube">
+    <shape type="cube">
 		<transform name="toWorld">
 			<translate z="1"/>
 			<scale x="0.3315" y="0.2258" z="0.0257"/>
-			<translate z="0.1789"/>
+			<translate z="0.1789"/> 
+			<scale x="33.33" y="50"/>
 		</transform>
 		<ref name="interior" id="med0"/>
 	</shape>  
@@ -94,8 +95,8 @@
 		<string name="filterType" value="nearest"/>
 		<integer name="divideX" value="6"/>
 		<integer name="divideY" value="6"/>
-		<integer name="tileX" value="6"/>
-		<integer name="tileY" value="6"/>
+		<integer name="tileX" value="200"/>
+		<integer name="tileY" value="300"/>
 		<string name="blockFile" value="C:\Users\Zahra\Documents\GitHub\Data\gabardine_400x600_tiled2.dat"/> 
 	</texture>
 	
@@ -106,28 +107,27 @@
 			<spectrum name="Beta" value="0.2474 0.2146 0.2143"/>
 	</bsdf> 
 		
-<!-- 	<shape type="heightfield">
+   	<shape type="heightfield">
 		<transform name="toWorld">
 			<scale x="0.3315" y="0.2258"/>
+			<scale x="33.33" y="50"/>
 		</transform>
-        <texture type="scale">
-			<texture type="instancedbitmap">
-				<string name="filename" value="heightmap.exr"/>
-				<float name="gamma" value="1"/>
-				<string name="filterType" value="nearest"/>
-				<integer name="divideX" value="6"/>
-				<integer name="divideY" value="6"/>
-				<integer name="tileX" value="6"/>
-				<integer name="tileY" value="6"/>
-				<string name="blockFile" value="C:\Users\Zahra\Documents\GitHub\Data\gabardine_400x600_tiled2.dat"/>
-			</texture>
-		</texture>				
+		<texture type="instancedbitmap">
+			<string name="filename" value="heightmap.exr"/>
+			<float name="gamma" value="1"/>
+			<string name="filterType" value="nearest"/>
+			<integer name="divideX" value="6"/>
+			<integer name="divideY" value="6"/>
+			<integer name="tileX" value="200"/>
+			<integer name="tileY" value="300"/>
+			<string name="blockFile" value="C:\Users\Zahra\Documents\GitHub\Data\gabardine_400x600_tiled2.dat"/>
+		</texture>			
 		<ref id="myMaterial"/>
-	</shape>  -->  
+	</shape>     
 	
 	<shape type="rectangle">
 		<transform name="toWorld">
-			<scale x="20" y="20"/>
+			<scale x="100" y="100"/>
 			<translate z="-0.01"/>
 		</transform>
 		<bsdf type="diffuse">

@@ -137,14 +137,14 @@ with io.open(fname, mode='rb') as fin:
                 cv2.imwrite('heightmap.exr', height_out.astype(np.float32))
 
                 with open('output.txt', 'w') as fout:
-                    fout.write('<!-- Transform for the volume -->\n')
+                    fout.write('<!-- Transform for the volume (untiled) -->\n')
                     fout.write('<transform name="toWorld">\n')
                     fout.write('    <translate x="%.4f" y="%.4f" z="%.4f"/>\n' % (-0.5*(pMin[0] + pMax[0]), -0.5*(pMin[1] + pMax[1]), -pMin[2]))
                     fout.write('</transform>\n\n')
 
                     hybridZ = extent[2]*float(sz[2] - 1 - threshold)/sz[2]
 
-                    fout.write('<!-- Transform for the bounding cube -->\n')
+                    fout.write('<!-- Transform for the bounding cube (top only) -->\n')
                     fout.write('<transform name="toWorld">\n')
                     fout.write('    <translate z="1"/>\n')
                     fout.write('    <scale x="%.4f" y="%.4f" z="%.4f"/>\n' % (0.5*extent[0], 0.5*extent[1], 0.5*hybridZ))
@@ -155,6 +155,17 @@ with io.open(fname, mode='rb') as fin:
                     fout.write('<transform name="toWorld">\n')
                     fout.write('    <scale x="%.4f" y="%.4f"/>\n' % (extent[0]/2.0, extent[1]/2.0))
                     fout.write('</transform>\n\n')
+                    
+                    fout.write('<!-- Transform for the volume (tiled) -->\n')
+                    fout.write('<transform name="toWorld">\n')
+                    fout.write('    <translate z="%.4f"/>\n' % ( 0.5*(pMax[2]-pMin[2]) ))
+                    fout.write('</transform>\n\n')
+                    
+                    fout.write('<!-- Transform for the bounding cube (bottom only) -->\n')
+                    fout.write('<transform name="toWorld">\n')
+                    fout.write('    <translate z="%.4f"/>\n' % ( 0.5*(pMax[2]-pMin[2]) - 0.5*hybridZ ))
+                    fout.write('</transform>\n\n')
+            
             else:
                 sys.stderr.write('Cannot save: volume has not been processed yet!\n')
         else:
