@@ -60,13 +60,13 @@
 		<ref name="interior" id="med0"/>
 	</shape>  -->
 	<!-- Volume (bottom only, for compare with heightmap-only) -->
- 	<shape type="cube">
+<!--  	<shape type="cube">
 		<transform name="toWorld">
 			<translate z="1"/>
 			<scale x="0.3315" y="0.2258" z="0.08455"/>
 		</transform>
 		<ref name="interior" id="med0"/>
-	</shape>
+	</shape> -->
 
 	<!-- Volume (top only, for hybrid) -->
 <!--    	<shape type="cube">
@@ -76,7 +76,7 @@
 	    <translate z="0.1690"/>
 		</transform>
 		<ref name="interior" id="med0"/>
-	</shape>
+	</shape> -->
 	
 	<shape type="heightfield">
 		<string name="filename" value="heightmap.exr"/>
@@ -93,7 +93,7 @@
 			<spectrum name="Ks" value="0.1767,0.0018,0.0013"/>
 			<spectrum name="Beta" value="0.2474 0.2146 0.2143"/>
 		</bsdf>
-	</shape>  -->
+	</shape>  
 	
  	<shape type="rectangle">
 		<transform name="toWorld">
